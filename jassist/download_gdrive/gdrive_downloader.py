@@ -27,13 +27,23 @@ def run_download(config: dict) -> bool:
     """
     try:
         logger.debug("Initializing Google Drive service")
-        service = get_service("drive", "v3", config)
+        # Get service without passing config - auth config will be loaded from google_auth_config.json
+        service = get_service("drive", "v3")
         if not service:
             logger.error("Google Drive authentication failed.")
             return False
 
         target_folders = config['folders'].get('target_folders', ['root'])
         dry_run = config.get('download', {}).get('dry_run', False)
+        
+        # Stats tracking
+        stats = {
+            "folders_processed": 0,
+            "files_found": 0,
+            "files_downloaded": 0,
+            "files_deleted": 0,
+            "errors": 0
+        }
 
         if dry_run:
             logger.info("Running in DRY RUN mode")
@@ -48,13 +58,36 @@ def run_download(config: dict) -> bool:
                     continue
 
                 logger.info(f"Processing folder: {folder_name} (ID: {folder_id})")
-                process_folder(service, folder_id, folder_name, config, dry_run=dry_run)
+                folder_stats = process_folder(service, folder_id, folder_name, config, dry_run=dry_run)
+                
+                # Update statistics
+                stats["folders_processed"] += 1
+                stats["files_found"] += folder_stats.get("files_found", 0)
+                stats["files_downloaded"] += folder_stats.get("files_downloaded", 0)
+                stats["files_deleted"] += folder_stats.get("files_deleted", 0)
+                stats["errors"] += folder_stats.get("errors", 0)
+                
             except Exception as e:
                 logger.error(f"Error processing folder '{folder_name}': {e}")
                 logger.debug(traceback.format_exc())
+                stats["errors"] += 1
 
-        logger.info("Google Drive download process completed.")
-        return True
+        # Log summary
+        logger.info("=== Google Drive Download Summary ===")
+        logger.info(f"Folders processed: {stats['folders_processed']}")
+        logger.info(f"Files found: {stats['files_found']}")
+        logger.info(f"Files downloaded: {stats['files_downloaded']}")
+        
+        if config.get('download', {}).get('delete_after_download', False):
+            logger.info(f"Files deleted from Google Drive: {stats['files_deleted']}")
+            
+        if stats["errors"] > 0:
+            logger.warning(f"Errors encountered: {stats['errors']}")
+            
+        if dry_run:
+            logger.info("THIS WAS A DRY RUN - No actual changes were made")
+
+        return stats["errors"] == 0
 
     except Exception as e:
         logger.error(f"Unexpected error in run_download: {e}")
@@ -71,7 +104,18 @@ def process_folder(service, folder_id, folder_name, config, dry_run=False):
         folder_name: Name of the folder (for logging)
         config: Download configuration
         dry_run: If True, only simulate downloads without actual changes
+        
+    Returns:
+        dict: Statistics about processing results
     """
+    # Stats tracking
+    stats = {
+        "files_found": 0,
+        "files_downloaded": 0,
+        "files_deleted": 0,
+        "errors": 0
+    }
+    
     try:
         logger.debug(f"Querying for files in folder: {folder_name}")
         query = f"'{folder_id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
@@ -83,6 +127,7 @@ def process_folder(service, folder_id, folder_name, config, dry_run=False):
 
         all_items = results.get('files', [])
         logger.debug(f"Found {len(all_items)} files in folder {folder_name}")
+        stats["files_found"] = len(all_items)
         
         # Filter files by extensions according to config
         file_extensions = config.get('file_types', {}).get('include', [])
@@ -114,15 +159,35 @@ def process_folder(service, folder_id, folder_name, config, dry_run=False):
 
             if dry_run:
                 logger.info(f"Would download: {item_name} -> {output_path}")
+                if config.get('download', {}).get('delete_after_download', False):
+                    logger.info(f"Would delete: {item_name} from Google Drive")
                 continue
 
             result = download_file(service, item_id, str(output_path))
-            if result['success'] and config.get('download', {}).get('delete_after_download', False):
-                logger.debug(f"Download successful, attempting to delete source file: {item_name}")
-                delete_file(service, item_id, item_name)
+            if result['success']:
+                logger.info(f"✅ Successfully downloaded: {item_name} -> {output_path}")
+                stats["files_downloaded"] += 1
+                
+                if config.get('download', {}).get('delete_after_download', False):
+                    logger.debug(f"Attempting to delete source file after successful download: {item_name}")
+                    delete_result = delete_file(service, item_id, item_name)
+                    
+                    if delete_result:
+                        logger.info(f"🔄 Download and delete completed for: {item_name}")
+                        stats["files_deleted"] += 1
+                    else:
+                        logger.warning(f"⚠️ File downloaded but deletion failed: {item_name}")
+                        stats["errors"] += 1
+            else:
+                logger.error(f"❌ Failed to download: {item_name}")
+                logger.debug(f"Error: {result.get('error', 'Unknown error')}")
+                stats["errors"] += 1
 
         logger.info(f"Finished processing folder: {folder_name}")
+        return stats
 
     except Exception as e:
         logger.error(f"Error in process_folder for '{folder_name}': {e}")
         logger.debug(traceback.format_exc())
+        stats["errors"] += 1
+        return stats

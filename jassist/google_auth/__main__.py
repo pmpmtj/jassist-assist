@@ -11,36 +11,38 @@ project_root = script_dir.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from jassist.google_auth.auth_manager import get_credentials
+from jassist.google_auth.auth_manager import get_service, load_auth_config
 from jassist.logger_utils.logger_utils import setup_logger
 
 logger = setup_logger("auth_test", module="google_auth")
 
 def main():
     try:
-        # Test auth config
-        auth_cfg = {
-            "credentials_path": "credentials",
-            "credentials_file": "my_credentials.json",
-            "token_file": "token.pickle"
-        }
+        logger.info("Testing auth config loading...")
+        auth_config = load_auth_config()
         
-        # Test scopes
-        scopes = ["https://www.googleapis.com/auth/drive"]
+        if not auth_config:
+            logger.error("❌ Failed to load auth config")
+            return False
+            
+        logger.info("✅ Auth config loaded successfully")
         
-        logger.info("Testing credential loading...")
-        creds = get_credentials(auth_cfg, scopes)
+        # Test drive service
+        logger.info("Testing Google Drive service creation...")
+        drive_service = get_service("drive", "v3")
         
-        if creds:
-            logger.info("✅ Credentials loaded successfully!")
-            logger.info(f"Token expiry: {creds.expiry}")
+        if drive_service:
+            logger.info("✅ Drive service created successfully!")
+            # Try a simple API call to test authentication
+            about = drive_service.about().get(fields="user").execute()
+            logger.info(f"Authenticated as: {about['user']['emailAddress']}")
             return True
         else:
-            logger.error("❌ Failed to load credentials")
+            logger.error("❌ Failed to create Drive service")
             return False
             
     except Exception as e:
-        logger.exception(f"Error testing credentials: {e}")
+        logger.exception(f"Error testing auth: {e}")
         return False
 
 if __name__ == "__main__":

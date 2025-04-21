@@ -31,18 +31,30 @@ def download_file(service, file_id, file_path):
             done = False
             while not done:
                 status, done = downloader.next_chunk()
-                logger.info(f"Download {int(status.progress() * 100)}% complete.")
-        logger.info(f"Download completed: {file_path}")
-        return {"success": True, "path": str(file_path)}
+                logger.debug(f"Download {int(status.progress() * 100)}% complete for {file_path}")
+        
+        file_size = Path(file_path).stat().st_size
+        readable_size = format_file_size(file_size)
+        logger.info(f"Download completed: {file_path} ({readable_size})")
+        return {"success": True, "path": str(file_path), "size": file_size}
     except Exception as e:
         logger.error(f"Failed to download file {file_id}: {e}")
         logger.debug(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
+def format_file_size(size_bytes):
+    """Format file size in human-readable format"""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size_bytes < 1024.0 or unit == 'GB':
+            return f"{size_bytes:.2f} {unit}"
+        size_bytes /= 1024.0
+
 def delete_file(service, file_id, file_name=None):
     try:
         service.files().delete(fileId=file_id).execute()
-        logger.info(f"Deleted file: {file_name or file_id}")
+        display_name = file_name or file_id
+        logger.info(f"🗑️ Successfully deleted file from Google Drive: {display_name}")
+        logger.debug(f"Deleted file with ID: {file_id}")
         return True
     except Exception as e:
         logger.error(f"Failed to delete file {file_name or file_id}: {e}")

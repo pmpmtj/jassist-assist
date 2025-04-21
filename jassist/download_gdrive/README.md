@@ -9,7 +9,12 @@ This module allows downloading files from Google Drive according to configured c
    jassist/credentials/my_credentials.json
    ```
 
-2. Configure the download settings in:
+2. Verify the Google Auth configuration:
+   ```
+   jassist/google_auth/config/google_auth_config.json
+   ```
+
+3. Configure the download settings in:
    ```
    jassist/download_gdrive/config/download_gdrive_config.json
    ```
@@ -22,32 +27,36 @@ Run the module from the project root:
 python -m jassist.download_gdrive
 ```
 
-### Configuration Options
+Or test the authentication:
+```
+python -m jassist.google_auth
+```
 
-- `apis.drive.scopes`: Google API permissions to request (required)
-- `auth`: Authentication settings
-  - `credentials_file`: Should be set to "my_credentials.json"
-  - `credentials_path`: Path to credentials directory (default: "credentials")
-- `file_types.include`: File extensions to download
-- `folders.target_folders`: Folders to search for files
-- `download`: Download behavior settings
-  - `add_timestamps`: Add timestamps to downloaded files
-  - `delete_after_download`: Remove files from Google Drive after download
-  - `dry_run`: If true, only simulate downloads
+### Configuration
 
-### Example Configuration
+#### Google Auth Config (`google_auth_config.json`)
+Contains authentication settings and API scopes:
 
 ```json
 {
     "auth": {
         "credentials_path": "credentials",
-        "credentials_file": "my_credentials.json"
+        "credentials_file": "my_credentials.json",
+        "token_file": "token.pickle"
     },
     "apis": {
         "drive": {
             "scopes": ["https://www.googleapis.com/auth/drive"]
         }
-    },
+    }
+}
+```
+
+#### Downloader Config (`download_gdrive_config.json`)
+Contains download behavior settings:
+
+```json
+{
     "file_types": {
         "include": [".pdf", ".docx", ".xlsx"],
         "exclude": []

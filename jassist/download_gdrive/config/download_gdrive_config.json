@@ -1,14 +1,4 @@
 {
-    "auth": {
-        "credentials_path": "credentials",
-        "credentials_file": "my_credentials.json",
-        "token_file": "token.pickle"
-    },
-    "apis": {
-        "drive": {
-            "scopes": ["https://www.googleapis.com/auth/drive"]
-        }
-    },
     "file_types": {
         "include": [".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".pdf", ".docx", ".xlsx"],
         "exclude": []
@@ -19,7 +9,7 @@
     "download": {
         "add_timestamps": true,
         "timestamp_format": "%Y%m%d_%H%M%S_%f",
-        "delete_after_download": false,
+        "delete_after_download": true,
         "dry_run": false
     }
 }

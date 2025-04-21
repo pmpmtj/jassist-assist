@@ -1,4 +1,5 @@
 # auth_manager.py
+import json
 from pathlib import Path
 import pickle
 import traceback
@@ -10,6 +11,26 @@ from jassist.logger_utils.logger_utils import setup_logger
 from jassist.utils.path_utils import resolve_path, ensure_directory_exists
 
 logger = setup_logger("auth_manager", module="google_auth")
+
+def load_auth_config():
+    """Load auth configuration from the dedicated config file."""
+    try:
+        # Get path to auth config file
+        config_file = Path(__file__).resolve().parent / "config" / "google_auth_config.json"
+        logger.debug(f"Loading auth config from: {config_file}")
+        
+        if not config_file.exists():
+            logger.error(f"Auth config file not found: {config_file}")
+            return {}
+            
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            logger.debug(f"Auth config loaded successfully")
+            return config
+    except Exception as e:
+        logger.error(f"Failed to load auth config: {e}")
+        logger.debug(traceback.format_exc())
+        return {}
 
 def get_credentials(auth_cfg: dict, scopes: list):
     """
@@ -79,14 +100,14 @@ def get_credentials(auth_cfg: dict, scopes: list):
         logger.debug(traceback.format_exc())
         return None
 
-def get_service(api_name: str, api_version: str, config: dict):
+def get_service(api_name: str, api_version: str, config: dict = None):
     """
     Get authenticated Google API service.
     
     Args:
         api_name: Name of the API (e.g., 'drive')
         api_version: Version of the API (e.g., 'v3')
-        config: Configuration dictionary
+        config: Optional configuration dictionary (if not provided, will load from auth config)
         
     Returns:
         Google API service or None if authentication failed
@@ -94,25 +115,22 @@ def get_service(api_name: str, api_version: str, config: dict):
     try:
         logger.debug(f"Setting up {api_name} {api_version} service")
         
-        # Try different configuration formats
-        scopes = []
-        
-        # Try the older format first (api.scopes)
-        if "api" in config and "scopes" in config["api"]:
-            scopes = config["api"]["scopes"]
-            logger.debug(f"Using scopes from api.scopes: {scopes}")
-        
-        # Try the newer format (apis.api_name.scopes)
-        elif "apis" in config and api_name in config["apis"] and "scopes" in config["apis"][api_name]:
-            scopes = config["apis"][api_name]["scopes"]
-            logger.debug(f"Using scopes from apis.{api_name}.scopes: {scopes}")
-        
-        if not scopes:
-            logger.error(f"No scopes defined for {api_name} API in configuration")
+        # Load auth config if not provided
+        auth_config = load_auth_config()
+        if not auth_config:
+            logger.error("Failed to load auth configuration")
+            return None
+            
+        # Get scopes from auth config
+        if "apis" in auth_config and api_name in auth_config["apis"] and "scopes" in auth_config["apis"][api_name]:
+            scopes = auth_config["apis"][api_name]["scopes"]
+            logger.debug(f"Using scopes from auth config: {scopes}")
+        else:
+            logger.error(f"No scopes defined for {api_name} API in auth configuration")
             return None
                 
-        logger.debug(f"Using scopes: {scopes}")
-        creds = get_credentials(config.get("auth", {}), scopes)
+        # Get credentials using auth config
+        creds = get_credentials(auth_config.get("auth", {}), scopes)
         
         if not creds:
             logger.error("Failed to obtain credentials")
