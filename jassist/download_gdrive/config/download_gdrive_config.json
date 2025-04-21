@@ -1,6 +1,6 @@
 {
     "file_types": {
-        "include": [".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".pdf", ".docx", ".xlsx"],
+        "include": [".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac", ".txt"],
         "exclude": []
     },
     "folders": {
@@ -9,7 +9,7 @@
     "download": {
         "add_timestamps": true,
         "timestamp_format": "%Y%m%d_%H%M%S_%f",
-        "delete_after_download": true,
+        "delete_after_download": false,
         "dry_run": false
     }
 }
