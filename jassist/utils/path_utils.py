@@ -43,7 +43,18 @@ def resolve_path(path_input: Union[str, Path], base_dir: Path = None) -> Path:
 
 
 def ensure_directory_exists(dir_path: Path, description="directory"):
+    """
+    Ensure a directory exists, creating it if necessary.
+    
+    Args:
+        dir_path: Path to check/create
+        description: Description for logging
+    """
     try:
+        # Import the logger here to avoid circular imports
+        from jassist.logger_utils.logger_utils import setup_logger
+        logger = setup_logger("path_utils", module="utils")
+        
         if not dir_path.exists():
             dir_path.mkdir(parents=True, exist_ok=True)
             logger.info(f"Created {description} at: {dir_path}")

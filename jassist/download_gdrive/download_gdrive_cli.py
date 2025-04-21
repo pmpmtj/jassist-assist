@@ -10,14 +10,13 @@ def main():
     try:
         # Get base directory paths
         script_dir = Path(__file__).resolve().parent
-        jassist_dir = script_dir.parent.parent
+        jassist_dir = script_dir.parent
         
-        # Paths to config and template using consistent resolution
-        config_path = resolve_path("config/download_config.json", jassist_dir)
-        template_path = resolve_path("download_config_sample.json", script_dir)
+        # Path to config using consistent resolution - corrected path
+        config_path = resolve_path("download_gdrive/config/download_gdrive_config.json", jassist_dir)
 
         logger.info(f"Loading configuration from {config_path}")
-        config = load_config(config_path, template_path)
+        config = load_config(config_path)
 
         logger.info("Starting download process...")
         success = run_download(config)

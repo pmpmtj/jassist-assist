@@ -2,7 +2,6 @@ import logging
 import os
 import json
 from pathlib import Path
-from utils.path_utils import resolve_path
 from logging.handlers import RotatingFileHandler
 
 ENCODING = "utf-8"
@@ -10,14 +9,14 @@ DEFAULT_LOG_LEVEL = "INFO"
 DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-# Base directory for the project
-PROJECT_DIR = resolve_path(Path(__file__).parents[1])
+# Base directory for the project - go up one level from current file
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 
-# Logger config file (relative to current file's parent)
-LOGGER_CONFIG_PATH = resolve_path("config/logger_config.json", base_dir=Path(__file__).parent)
+# Logger config file
+LOGGER_CONFIG_PATH = Path(__file__).resolve().parent / "config" / "logger_config.json"
 
-# Logs directory (ensures it's absolute)
-LOGS_DIR = resolve_path("logs", base_dir=PROJECT_DIR)
+# Logs directory
+LOGS_DIR = PROJECT_DIR / "logs"
 
 
 def load_logger_config():
@@ -85,13 +84,14 @@ def setup_logger(name="jassist", module=None):
     file_level = getattr(logging, file_config.get("level", DEFAULT_LOG_LEVEL).upper(), logging.INFO)
     file_format = file_config.get("format", DEFAULT_LOG_FORMAT)
     file_date_format = file_config.get("date_format", DEFAULT_DATE_FORMAT)
-    log_filename = file_config.get("log_filename", "voice_diary.log")
+    log_filename = file_config.get("log_filename", "jassist.log")
     max_bytes = file_config.get("max_size_bytes", 1048576)  # Default 1MB
     backup_count = file_config.get("backup_count", 5)
     encoding = file_config.get("encoding", ENCODING)
     
-    # Ensure log directory exists and get absolute path
-    log_path = resolve_path(log_filename, base_dir=LOGS_DIR)
+    # Ensure log directory exists
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / log_filename
 
     file_formatter = logging.Formatter(
         fmt=file_format,

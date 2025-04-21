@@ -2,40 +2,48 @@
 import json
 from pathlib import Path
 from typing import Dict, Any
-from jassist.utils.path_utils import ensure_directory_exists
 from jassist.logger_utils.logger_utils import setup_logger, ENCODING
-from jassist.utils.path_utils import resolve_path
+from jassist.utils.path_utils import resolve_path, ensure_directory_exists
 
 logger = setup_logger("config_loader", module="download_gdrive")
 
-def load_config(config_path: Path, template_path: Path = None) -> Dict[str, Any]:
+def load_config(config_path: Path) -> Dict[str, Any]:
+    """
+    Load configuration from the specified path.
+    
+    Args:
+        config_path: Path to the configuration file
+        
+    Returns:
+        Dict containing configuration
+        
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        ValueError: If config is missing required keys
+    """
     def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate that config has all required keys."""
         required_keys = ["file_types", "folders", "download"]
         for key in required_keys:
             if key not in config:
                 raise ValueError(f"Missing required config key: {key}")
         
+        logger.debug(f"Config validated successfully with keys: {', '.join(config.keys())}")
         return config
 
-    # Ensure paths are properly resolved
+    # Ensure path is properly resolved
     config_path = resolve_path(config_path)
-    if template_path:
-        template_path = resolve_path(template_path)
+    logger.debug(f"Resolved config path: {config_path}")
     
-    # Ensure the directory exists for all cases
+    # Ensure the directory exists
     ensure_directory_exists(config_path.parent, description="config directory")
     
     if config_path.exists():
+        logger.debug(f"Loading configuration from: {config_path}")
         with open(config_path, "r", encoding=ENCODING) as f:
             config = json.load(f)
+            logger.info(f"Configuration loaded successfully from {config_path}")
             return validate_config(config)
-    elif template_path and template_path.exists():
-        with open(template_path, "r", encoding=ENCODING) as src:
-            data = json.load(src)
-        # Create the config file
-        with open(config_path, "w", encoding=ENCODING) as dst:
-            json.dump(data, dst, indent=4, sort_keys=True)
-        logger.info(f"Created config from template at: {config_path}")
-        return validate_config(data)
     else:
-        raise FileNotFoundError("No config file or template available.")
+        logger.error(f"Configuration file not found: {config_path}")
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
