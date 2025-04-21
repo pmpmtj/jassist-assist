@@ -1,0 +1,36 @@
+{
+    "logging": {
+        "_description": "Centralized logging configuration for all Voice Diary modules",
+        "console": {
+            "_description": "Console (terminal) logging configuration",
+            "date_format": "%H:%M:%S",
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "level": "INFO"
+        },
+        "file": {
+            "_description": "File-based logging settings including rotation and formatting",
+            "backup_count": 5,
+            "date_format": "%Y-%m-%d %H:%M:%S",
+            "encoding": "utf-8",
+            "format": "%(asctime)s - %(name)s - %(levelname)s - [%(module)s:%(lineno)d] - %(message)s",
+            "level": "INFO",
+            "log_filename": "jassist.log",
+            "max_size_bytes": 1048576
+        },
+        "modules": {
+            "calendar": {
+                "level": "DEBUG",
+                "log_filename": "calendar.log"
+            },
+            "db_utils": {
+                "level": "DEBUG",
+                "log_filename": "db_utils.log"
+            },
+            "download_gdrive": {
+                "level": "DEBUG",
+                "log_filename": "download_gdrive.log"
+            }            
+        },
+        "validate_format": true
+    }
+}

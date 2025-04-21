@@ -1,0 +1,19 @@
+{
+    "auth": {
+      "credentials_path": "credentials",
+      "credentials_file": "my_credentials.json",
+      "token_file": "token.pickle"
+    },
+    "apis": {
+      "drive": {
+        "scopes": ["https://www.googleapis.com/auth/drive"]
+      },
+      "calendar": {
+        "scopes": ["https://www.googleapis.com/auth/calendar"]
+      },
+      "gmail": {
+        "scopes": ["https://www.googleapis.com/auth/gmail.send"]
+      }
+    }
+  }
+  

@@ -1,0 +1,20 @@
+{
+    "file_types": {
+        "include": [
+            ".mp3",
+            ".wav",
+            ".m4a"
+        ]
+    },
+    "download": {
+        "add_timestamps": true,
+        "delete_after_download": false,
+        "dry_run": false,
+        "timestamp_format": "%Y%m%d_%H%M%S_%f"
+    },
+    "folders": {
+        "target_folders": [
+            "root"
+        ]
+    }
+}
