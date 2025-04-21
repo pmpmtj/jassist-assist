@@ -32,6 +32,15 @@ Or test the authentication:
 python -m jassist.google_auth
 ```
 
+### Features
+
+- Filter files by extension (`.pdf`, `.mp3`, etc.)
+- Target specific folders in Google Drive
+- Add timestamps to downloaded filenames
+- Delete files from Google Drive after successful download
+- Dry-run mode to simulate operations
+- Detailed logging with download progress and statistics
+
 ### Configuration
 
 #### Google Auth Config (`google_auth_config.json`)
@@ -66,8 +75,28 @@ Contains download behavior settings:
     },
     "download": {
         "add_timestamps": true,
+        "timestamp_format": "%Y%m%d_%H%M%S_%f",
         "delete_after_download": false,
         "dry_run": true
     }
 }
-``` 
+```
+
+### Logging
+
+The module provides detailed logging including:
+
+- Download progress and file sizes
+- Successful and failed file deletions
+- End-of-run statistics showing:
+  - Number of folders processed
+  - Number of files found
+  - Number of files downloaded
+  - Number of files deleted from Google Drive
+  - Any errors encountered
+
+### Security
+
+- The module requires Google API credentials with appropriate permissions
+- Deletion operations are only performed after successful download
+- Dry-run mode allows testing configuration without making changes 
