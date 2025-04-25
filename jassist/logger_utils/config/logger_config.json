@@ -18,18 +18,22 @@
             "max_size_bytes": 1048576
         },
         "modules": {
-            "calendar": {
+            "download_gdrive": {
                 "level": "DEBUG",
-                "log_filename": "calendar.log"
+                "log_filename": "download_gdrive.log"
             },
             "db_utils": {
                 "level": "DEBUG",
                 "log_filename": "db_utils.log"
             },
-            "download_gdrive": {
+            "google_auth": {
                 "level": "DEBUG",
-                "log_filename": "download_gdrive.log"
-            }            
+                "log_filename": "google_auth.log"
+            },
+            "utils": {
+                "level": "DEBUG",
+                "log_filename": "utils.log"
+            }
         },
         "validate_format": true
     }
