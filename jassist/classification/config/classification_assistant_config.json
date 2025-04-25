@@ -1,0 +1,21 @@
+{
+  "assistant_name": "Classification Assistant",
+  "api_key": "",
+  "model": "gpt-4o-mini",
+  "temperature": 0.2,
+  "max_tokens": 1000,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "save_usage_stats": true,
+  "thread_retention_days": 30,
+  "default_response_format": "json",
+  "tools": [
+    {
+      "type": "code_interpreter"
+    }
+  ],
+  "thread_id_classification_assistant_default": "thread_EpqTsMsT3JxSTfiGzXpjPdsq",
+  "thread_id_classification_assistant_default_created_at": "2025-04-23T11:46:05.255045",
+  "assistant_id_classification_assistant": "asst_ceJglM6mwLRPDrU9hDRnP0MJ"
+}

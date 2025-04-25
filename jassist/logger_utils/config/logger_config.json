@@ -37,6 +37,14 @@
             "transcribe": {
                 "level": "DEBUG",
                 "log_filename": "transcribe.log"
+            },
+            "classification": {
+                "level": "DEBUG",
+                "log_filename": "classification.log"
+            },
+            "api_assistants_cliente": {
+                "level": "DEBUG",
+                "log_filename": "api_assistants_cliente.log"
             }
         },
         "validate_format": true

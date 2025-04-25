@@ -1,0 +1,78 @@
+# Prompt templates for classification processing
+
+prompts:
+  assistant_instructions:
+    template: |
+      "Leia atentamente o conteúdo do campo 'entry_content'. Separe-o em diferentes contextos sempre que identificar uma mudança de assunto, ação, entidade ou foco.\n\n"
+
+      "Para cada contexto identificado, siga estas diretivas:\n"
+
+      "1. Cada contexto só pode conter uma etiqueta.\n"
+      "2. Ignore erros ortográficos comuns se não impedirem a compreensão.\n"
+      "3. Analise cuidadosamente nuances que possam pertencer a mais do que uma categoria — escolha a mais dominante. Em casos ambíguos, priorize esta ordem:\n"
+      "   agenda > diario > contas > tarefas > contactos > entidades\n"
+      "4. Se houver uma tarefa mencionada e também um evento relacionado, classifique como 'agenda', mesmo que estejam na mesma frase.\n"
+      "5. Nomes de pessoas não são automaticamente 'contactos' a não ser que haja telefone, email ou contexto de relação funcional.\n"
+      "6. Não classifique como 'entidades' locais fictícios, genéricos ou meras referências vagas (ex: 'um café qualquer').\n"
+      "7. Registre cada contexto separadamente, mesmo que sejam curtos.\n"
+
+      "Categorias disponíveis:\n"
+      "- diario: reflexões pessoais, sentimentos, opiniões subjetivas.\n"
+      "- agenda: eventos com data/hora definida, reuniões, compromissos.\n"
+      "- tarefas: ações a serem feitas, planos, objetivos práticos.\n"
+      "- contas: movimentações financeiras, despesas, receitas, valores.\n"
+      "- contactos: nomes acompanhados de telefone, email ou função.\n"
+      "- entidades: empresas, serviços, sites, instituições, marcas.\n\n"
+
+      "Formato de saída para cada contexto:\n"
+      texto: "o conteúdo extraído"
+      tag: a categoria apropriada (diario, agenda, tarefas, contas, contactos, entidades)
+
+      "Separe múltiplos contextos com uma linha em branco.\n"
+      "Nunca adicione explicações, comentários, nem repita o texto completo do campo.\n"
+      "Use sempre aspas duplas para envolver o texto extraído.\n"
+
+  
+  assistant_instructions_json:
+    template: |
+      "Leia atentamente o conteúdo do campo 'entry_content'. Separe-o em diferentes contextos sempre que identificar uma mudança de assunto, ação, entidade ou foco.\n\n"
+
+      "Para cada contexto identificado, siga estas diretivas:\n"
+
+      "1. Cada contexto só pode conter uma etiqueta.\n"
+      "2. Ignore erros ortográficos comuns se não impedirem a compreensão.\n"
+      "3. Analise cuidadosamente nuances que possam pertencer a mais do que uma categoria — escolha a mais dominante. Em casos ambíguos, priorize esta ordem:\n"
+      "   agenda > diario > contas > tarefas > contactos > entidades\n"
+      "4. Se houver uma tarefa mencionada e também um evento relacionado, classifique como 'agenda', mesmo que estejam na mesma frase.\n"
+      "5. Nomes de pessoas não são automaticamente 'contactos' a não ser que haja telefone, email ou contexto de relação funcional.\n"
+      "6. Não classifique como 'entidades' locais fictícios, genéricos ou meras referências vagas (ex: 'um café qualquer').\n"
+      "7. Registre cada contexto separadamente, mesmo que sejam curtos.\n"
+
+      "Categorias disponíveis:\n"
+      "- diario: reflexões pessoais, sentimentos, opiniões subjetivas.\n"
+      "- agenda: eventos com data/hora definida, reuniões, compromissos.\n"
+      "- tarefas: ações a serem feitas, planos, objetivos práticos.\n"
+      "- contas: movimentações financeiras, despesas, receitas, valores.\n"
+      "- contactos: nomes acompanhados de telefone, email ou função.\n"
+      "- entidades: empresas, serviços, sites, instituições, marcas.\n\n"
+
+      "Por favor, formate sua resposta como um objeto JSON válido com a seguinte estrutura:\n"
+      "{\n"
+      '  "classifications": [\n'
+      '    {"text": "texto extraído", "category": "categoria"}\n'
+      "  ]\n"
+      "}\n"
+      "Certifique-se de que sua resposta seja um JSON válido sem explicações adicionais."
+      
+      "Nunca adicione explicações, comentários, nem repita o texto completo do campo.\n"
+      "Use sempre aspas duplas para envolver o texto extraído.\n"
+
+
+
+  parse_entry_prompt:
+    template: |
+      "Leia com atenção o seguinte conteúdo e separe-o em diferentes contextos sempre que aplicável."
+      Atenção que, se existir uma tarefa, normalmente há (com exceções) um evento associado\n"
+      esteja atento a múltiplas etiquetas numa só frase\n 
+      - ex: Esta manhã acordei às 7h, fui tomar o pequeno-almoço e gastei 10 euros no pequeno-almoço. tem as tags diario e contas\n\n"
+      Texto: {entry_content}
