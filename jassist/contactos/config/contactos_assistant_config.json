@@ -1,0 +1,23 @@
+{
+  "assistant_name": "Assistente de Contactos",
+  "api_key": "",
+  "model": "gpt-4o-mini",
+  "temperature": 0.1,
+  "max_tokens": 500,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "save_usage_stats": true,
+  "thread_retention_days": 30,
+  "tools": [
+    {
+      "type": "code_interpreter"
+    }
+  ],
+  "assistant_id_contacts_assistant": "",
+  "thread_id_contacts_assistant_default": "",
+  "thread_id_contacts_assistant_default_created_at": "",
+  "assistant_id_assistente_de_contactos": "asst_xdGZfrpE7mm8q6DliXaPGkg7",
+  "thread_id_assistente_de_contactos_default": "thread_5UVYyZeNbiyoEnebaKuUTY0I",
+  "thread_id_assistente_de_contactos_default_created_at": "2025-04-25T15:39:29.675928"
+}
