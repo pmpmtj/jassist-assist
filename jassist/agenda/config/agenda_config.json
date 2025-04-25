@@ -1,0 +1,10 @@
+{
+    "paths": {
+        "credentials_directory": "credentials"
+    },
+    "google_agenda": {
+        "use_google_agenda": true,
+        "agenda_id": "primary",
+        "credentials_filename": "my_credentials.json"
+    }
+} 

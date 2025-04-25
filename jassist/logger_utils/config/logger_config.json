@@ -45,6 +45,10 @@
             "api_assistants_cliente": {
                 "level": "DEBUG",
                 "log_filename": "api_assistants_cliente.log"
+            },
+            "agenda": {
+                "level": "DEBUG",
+                "log_filename": "agenda.log"
             }
         },
         "validate_format": true

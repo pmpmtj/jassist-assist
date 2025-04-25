@@ -1,0 +1,174 @@
+#!/usr/bin/env python
+"""
+Agenda CLI Module
+
+This module provides a command-line interface and programmatic API
+for processing agenda entries.
+"""
+
+import sys
+import json
+import argparse
+from pathlib import Path
+from typing import Dict, Any, Optional, Tuple, Union
+
+from jassist.logger_utils.logger_utils import setup_logger
+
+# Set up logger
+logger = setup_logger("agenda_cli", module="agenda")
+
+def parse_agenda_text(input_text: str, transcription_id: Optional[int] = None, 
+                     test_mode: bool = False, db_only: bool = False, 
+                     calendar_only: bool = False) -> Tuple[bool, Dict[str, Any]]:
+    """
+    Parse agenda text and return structured data.
+    
+    This function can be imported and used programmatically.
+    
+    Args:
+        input_text: The text to parse for agenda information
+        transcription_id: Optional ID of associated transcription record
+        test_mode: If True, skips database operations (for testing)
+        db_only: If True, only save to database without Google Calendar
+        calendar_only: If True, only add to Google Calendar without database
+        
+    Returns:
+        Tuple containing (success status, event data or error info)
+    """
+    try:
+        logger.debug(f"Processing agenda text: {input_text[:50]}...")
+        
+        if test_mode:
+            # Import here to avoid circular imports
+            from .llm.openai_client import process_with_openai_assistant
+            from .utils.json_extractor import extract_json_from_text
+            
+            # Process with OpenAI to extract agenda event data
+            response = process_with_openai_assistant(input_text)
+            
+            # Extract JSON from response
+            event_data = extract_json_from_text(response)
+            if not event_data:
+                logger.error("Failed to extract JSON from LLM response")
+                return False, {"error": "Failed to extract JSON from LLM response"}
+                
+            return True, event_data
+        else:
+            # Import here to avoid circular imports
+            from jassist.agenda.agenda_processor import process_agenda_entry
+            
+            try:
+                # Process the entry
+                success, event_data = process_agenda_entry(
+                    text=input_text, 
+                    db_id=transcription_id,
+                    skip_db=calendar_only,
+                    skip_calendar=db_only
+                )
+                
+                if not success:
+                    logger.error("Failed to process agenda entry")
+                    if isinstance(event_data, dict) and "error" in event_data:
+                        return False, event_data
+                    return False, {"error": "Failed to process agenda entry"}
+                    
+                return True, event_data
+            except Exception as e:
+                import traceback
+                error_traceback = traceback.format_exc()
+                logger.error(f"Exception in process_agenda_entry: {e}\n{error_traceback}")
+                return False, {"error": str(e), "traceback": error_traceback}
+        
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.exception(f"Error parsing agenda text: {e}")
+        return False, {"error": str(e), "traceback": error_traceback}
+
+def main():
+    """
+    Main entry point for the CLI.
+    """
+    parser = argparse.ArgumentParser(description="Process agenda entries from text input")
+    parser.add_argument("--input", "-i", type=str, help="Text input to process")
+    parser.add_argument("--file", "-f", type=str, help="File containing text to process")
+    parser.add_argument("--id", type=int, help="Optional transcription ID", default=None)
+    parser.add_argument("--output", "-o", type=str, help="Output file (default: stdout)")
+    parser.add_argument("--pretty", "-p", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--test", "-t", action="store_true", help="Test mode (skips database and calendar operations)")
+    parser.add_argument("--db-only", action="store_true", help="Only save to database, skip Google Calendar")
+    parser.add_argument("--calendar-only", action="store_true", help="Only add to Google Calendar, skip database")
+    parser.add_argument("--complete", "-c", action="store_true", help="Complete mode: parse text, save to DB, and add to Google Calendar")
+    parser.add_argument("--debug", "-d", action="store_true", help="Enable debug mode with more verbose logs")
+    
+    args = parser.parse_args()
+    
+    # Set up debug logging if requested
+    if args.debug:
+        import logging
+        for handler in logger.handlers:
+            handler.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug logging enabled")
+    
+    # Check for input source
+    if args.input:
+        input_text = args.input
+    elif args.file:
+        try:
+            with open(args.file, 'r', encoding='utf-8') as f:
+                input_text = f.read()
+        except Exception as e:
+            logger.error(f"Error reading input file: {e}")
+            print(f"Error: Could not read input file: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        parser.print_help()
+        sys.exit(1)
+        
+    # Validate arguments
+    if sum([args.test, args.db_only, args.calendar_only, args.complete]) > 1:
+        print("Error: Only one mode (--test, --db-only, --calendar-only, --complete) can be used at a time", file=sys.stderr)
+        sys.exit(1)
+        
+    # Determine mode
+    test_mode = args.test
+    db_only = args.db_only
+    calendar_only = args.calendar_only
+    
+    # If complete is specified, override other modes
+    if args.complete:
+        test_mode = False
+        db_only = False
+        calendar_only = False
+    
+    # Process the text
+    success, result = parse_agenda_text(
+        input_text=input_text, 
+        transcription_id=args.id,
+        test_mode=test_mode,
+        db_only=db_only,
+        calendar_only=calendar_only
+    )
+    
+    # Format output
+    indent = 2 if args.pretty else None
+    output = json.dumps(result, indent=indent, ensure_ascii=False)
+    
+    # Write output
+    if args.output:
+        try:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(output)
+        except Exception as e:
+            logger.error(f"Error writing output file: {e}")
+            print(f"Error: Could not write output file: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print(output)
+    
+    # Set exit code based on success
+    sys.exit(0 if success else 1)
+
+if __name__ == "__main__":
+    main()
