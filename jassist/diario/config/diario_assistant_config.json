@@ -1,0 +1,23 @@
+{
+  "assistant_name": "Assistente de Diario",
+  "api_key": "",
+  "model": "gpt-4o-mini",
+  "temperature": 0.1,
+  "max_tokens": 500,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "save_usage_stats": true,
+  "thread_retention_days": 30,
+  "tools": [
+    {
+      "type": "code_interpreter"
+    }
+  ],
+  "assistant_id_assistente_de_contactos": "",
+  "thread_id_assistente_de_contactos_default": "",
+  "thread_id_assistente_de_contactos_default_created_at": "",
+  "assistant_id_assistente_de_diario": "asst_78x2yDkfnrU7B1eW43O8LHqO",
+  "thread_id_assistente_de_diario_default": "thread_PNYeM5dVqpYmPgQqwS0fMJxD",
+  "thread_id_assistente_de_diario_default_created_at": "2025-04-25T16:29:41.059886"
+}
