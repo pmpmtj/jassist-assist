@@ -33,6 +33,10 @@
             "utils": {
                 "level": "DEBUG",
                 "log_filename": "utils.log"
+            },
+            "transcribe": {
+                "level": "DEBUG",
+                "log_filename": "transcribe.log"
             }
         },
         "validate_format": true

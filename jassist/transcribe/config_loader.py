@@ -1,0 +1,46 @@
+import json
+from pathlib import Path
+from typing import Dict, Any
+from dotenv import load_dotenv
+from jassist.logger_utils.logger_utils import setup_logger
+from jassist.utils.path_utils import resolve_path
+
+ENCODING = "utf-8"
+
+logger = setup_logger("config_loader", module="transcribe")
+
+# Define paths
+MODULE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = resolve_path("config/config_transcribe.json", MODULE_DIR)
+ENV_PATH = resolve_path("../credentials/.env", MODULE_DIR)
+
+def convert_string_booleans(config_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively convert 'true'/'false' strings into Python booleans."""
+    for key, value in config_dict.items():
+        if isinstance(value, dict):
+            convert_string_booleans(value)
+        elif isinstance(value, str):
+            if value.lower() == "true":
+                config_dict[key] = True
+            elif value.lower() == "false":
+                config_dict[key] = False
+    return config_dict
+
+def load_config() -> Dict[str, Any]:
+    """Load or create the transcription config."""
+    if CONFIG_PATH.exists():
+        try:
+            with open(CONFIG_PATH, "r", encoding=ENCODING) as f:
+                config = json.load(f)
+            logger.info(f"Loaded transcription config from: {CONFIG_PATH}")
+            return convert_string_booleans(config)
+        except Exception as e:
+            logger.warning(f"Failed to parse config: {e}")
+
+def load_environment():
+    """Load .env file for API keys and database config."""
+    if ENV_PATH.exists():
+        load_dotenv(dotenv_path=ENV_PATH)
+        logger.info(f"Environment variables loaded from: {ENV_PATH}")
+    else:
+        logger.warning(f".env file not found at expected location: {ENV_PATH}")

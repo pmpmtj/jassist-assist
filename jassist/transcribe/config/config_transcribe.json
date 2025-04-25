@@ -1,0 +1,14 @@
+{
+  "paths": {
+    "output_dir": "./transcriptions"
+  },
+  "model": {
+      "name": "gpt-4o-mini-transcribe",
+      "prompt": "Transcribe the following audio accurately.",
+      "response_format": "json"
+  },
+  "cost_management": {
+    "max_audio_duration_seconds": 300,
+    "warn_on_large_files": true
+  }
+}
