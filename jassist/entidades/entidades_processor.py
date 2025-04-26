@@ -120,7 +120,7 @@ def process_entity_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool, 
             return False, {"error": "Entity must have a name (nome)"}
         
         # Save to database
-        db_success, db_result = save_entity_to_db(entity_data, transcription_id=db_id)
+        db_success, db_result = save_entity_to_db(entity_data=entity_data, transcription_id=db_id)
         if not db_success:
             logger.error("Failed to save entity to database")
             return False, db_result

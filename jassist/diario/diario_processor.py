@@ -11,6 +11,8 @@ import os
 import time
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
+import psycopg2
+from psycopg2.extensions import register_adapter, AsIs
 
 from jassist.logger_utils.logger_utils import setup_logger
 from jassist.db_utils.db_connection import db_connection_handler
@@ -228,28 +230,36 @@ def save_diary_to_db(conn, diary_data: Dict[str, Any], transcription_id: Optiona
         Tuple containing (success status, diary entry ID or error info)
     """
     try:
-        cur = conn.cursor()
+        logger.debug(f"Saving diary to DB - Parameters: diary_data={type(diary_data)}, transcription_id={type(transcription_id)}")
         
-        # Extract fields from diary data
+        # Extract and sanitize fields from diary data
         conteudo = diary_data.get('conteudo', '')
+        if isinstance(conteudo, dict):
+            conteudo = json.dumps(conteudo)
+        elif conteudo is None:
+            conteudo = ''
+        
         estado_espirito = diary_data.get('estado_espirito', '')
+        if isinstance(estado_espirito, dict):
+            estado_espirito = json.dumps(estado_espirito)
+        elif estado_espirito is None:
+            estado_espirito = ''
         
-        # Handle etiquetas (tags) - convert to array if needed
-        etiquetas_raw = diary_data.get('etiquetas', [])
-        if isinstance(etiquetas_raw, str):
-            etiquetas = [etiquetas_raw]
-        elif isinstance(etiquetas_raw, list):
-            etiquetas = etiquetas_raw
-        else:
-            etiquetas = []
+        # Get etiquetas as string (we converted it in process_diary_entry)
+        etiquetas_str = diary_data.get('etiquetas', '')
+        if not isinstance(etiquetas_str, str):
+            etiquetas_str = str(etiquetas_str)
+            
+        logger.debug(f"DB parameters - conteudo: {type(conteudo)}, estado_espirito: {type(estado_espirito)}, etiquetas_str: {type(etiquetas_str)}")
         
-        # Insert into database
+        # Insert directly using string_to_array
+        cur = conn.cursor()
         cur.execute("""
             INSERT INTO diario 
             (conteudo, estado_espirito, etiquetas, id_transcricao_origem)
-            VALUES (%s, %s, %s, %s)
+            VALUES (%s, %s, STRING_TO_ARRAY(%s, ','), %s)
             RETURNING id
-        """, (conteudo, estado_espirito, etiquetas, transcription_id))
+        """, (conteudo, estado_espirito, etiquetas_str, transcription_id))
         
         # Get the inserted ID
         diary_id = cur.fetchone()[0]
@@ -289,6 +299,26 @@ def process_diary_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool, D
         Tuple containing (success status, diary data or error info)
     """
     try:
+        # Debug - check parameter types directly
+        logger.debug(f"Processing diary entry - Input types: text: {type(text)}, db_id: {type(db_id)}")
+        
+        # Handle case where db_id is a dictionary
+        transcription_id = None
+        if isinstance(db_id, dict):
+            logger.debug(f"db_id is a dictionary with keys: {list(db_id.keys())}")
+            # Check for db_id key directly
+            if 'db_id' in db_id:
+                transcription_id = db_id.get('db_id')
+                logger.debug(f"Extracted transcription_id from 'db_id' key: {transcription_id}")
+            # Also check for id key as fallback
+            elif 'id' in db_id:
+                transcription_id = db_id.get('id')
+                logger.debug(f"Extracted transcription_id from 'id' key: {transcription_id}")
+        else:
+            transcription_id = db_id
+            
+        logger.debug(f"Using transcription_id: {transcription_id}")
+        
         # Log the start of processing
         logger.debug(f"Processing diary entry (length: {len(text)})")
         
@@ -310,8 +340,20 @@ def process_diary_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool, D
             logger.error("Diary data missing required content field")
             return False, {"error": "Diary entry must have content field"}
             
+        # Log the data before saving
+        logger.debug(f"Diary data: {diary_data}")
+        
+        # Simplify for testing - convert diary_data to use string instead of array for etiquetas
+        if 'etiquetas' in diary_data and isinstance(diary_data['etiquetas'], list):
+            etiquetas_list = diary_data['etiquetas']
+            # Convert to comma separated string
+            etiquetas_str = ",".join(str(tag) for tag in etiquetas_list if tag)
+            # Replace with the string version
+            diary_data['etiquetas'] = etiquetas_str
+            logger.debug(f"Converted etiquetas to string: {etiquetas_str}")
+        
         # Save to database
-        db_success, db_result = save_diary_to_db(diary_data, transcription_id=db_id)
+        db_success, db_result = save_diary_to_db(diary_data=diary_data, transcription_id=transcription_id)
         if not db_success:
             logger.error("Failed to save diary entry to database")
             return False, db_result

@@ -228,14 +228,42 @@ def save_contact_to_db(conn, contact_data: Dict[str, Any], transcription_id: Opt
         Tuple containing (success status, contact ID or error info)
     """
     try:
+        logger.debug(f"Saving contact to DB - Parameters: contact_data={type(contact_data)}, transcription_id={type(transcription_id)}")
+        
         cur = conn.cursor()
         
-        # Extract fields from contact data
+        # Extract and sanitize fields from contact data
         nome_proprio = contact_data.get('nome_proprio', '')
+        if isinstance(nome_proprio, dict):
+            nome_proprio = json.dumps(nome_proprio)
+        elif nome_proprio is None:
+            nome_proprio = ''
+            
         apelido = contact_data.get('apelido', '')
+        if isinstance(apelido, dict):
+            apelido = json.dumps(apelido)
+        elif apelido is None:
+            apelido = ''
+            
         telefone = contact_data.get('telefone', '')
+        if isinstance(telefone, dict):
+            telefone = json.dumps(telefone)
+        elif telefone is None:
+            telefone = ''
+            
         email = contact_data.get('email', '')
+        if isinstance(email, dict):
+            email = json.dumps(email)
+        elif email is None:
+            email = ''
+            
         nota = contact_data.get('nota', '')
+        if isinstance(nota, dict):
+            nota = json.dumps(nota)
+        elif nota is None:
+            nota = ''
+            
+        logger.debug(f"DB parameters - nome_proprio: {type(nome_proprio)}, apelido: {type(apelido)}, telefone: {type(telefone)}, email: {type(email)}, nota: {type(nota)}")
         
         # Insert into database
         cur.execute("""
@@ -283,6 +311,26 @@ def process_contact_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool,
         Tuple containing (success status, contact data or error info)
     """
     try:
+        # Debug - check parameter types directly
+        logger.debug(f"Processing contact entry - Input types: text: {type(text)}, db_id: {type(db_id)}")
+        
+        # Handle case where db_id is a dictionary
+        transcription_id = None
+        if isinstance(db_id, dict):
+            logger.debug(f"db_id is a dictionary with keys: {list(db_id.keys())}")
+            # Check for db_id key directly
+            if 'db_id' in db_id:
+                transcription_id = db_id.get('db_id')
+                logger.debug(f"Extracted transcription_id from 'db_id' key: {transcription_id}")
+            # Also check for id key as fallback
+            elif 'id' in db_id:
+                transcription_id = db_id.get('id')
+                logger.debug(f"Extracted transcription_id from 'id' key: {transcription_id}")
+        else:
+            transcription_id = db_id
+            
+        logger.debug(f"Using transcription_id: {transcription_id}")
+        
         # Log the start of processing
         logger.debug(f"Processing contact entry (length: {len(text)})")
         
@@ -310,7 +358,7 @@ def process_contact_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool,
             return False, {"error": "Contact must have at least one of: nome_proprio, apelido, telefone, email"}
             
         # Save to database
-        db_success, db_result = save_contact_to_db(contact_data, transcription_id=db_id)
+        db_success, db_result = save_contact_to_db(contact_data, transcription_id=transcription_id)
         if not db_success:
             logger.error("Failed to save contact to database")
             return False, db_result

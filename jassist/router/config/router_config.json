@@ -1,30 +1,30 @@
 {
     "module_mapping": {
-        "agenda": "jassist.agenda.process_entry",
-        "calendario": "jassist.agenda.process_entry",
-        "evento": "jassist.agenda.process_entry",
+        "agenda": "jassist.agenda.insert_into_agenda",
+        "calendario": "jassist.agenda.insert_into_agenda",
+        "evento": "jassist.agenda.insert_into_agenda",
         
-        "contacto": "jassist.contactos.process_entry",
-        "pessoa": "jassist.contactos.process_entry",
-        "contato": "jassist.contactos.process_entry",
+        "contacto": "jassist.contactos.insert_into_contacts",
+        "pessoa": "jassist.contactos.insert_into_contacts",
+        "contato": "jassist.contactos.insert_into_contacts",
         
-        "diario": "jassist.diario.process_entry",
-        "journal": "jassist.diario.process_entry",
-        "nota": "jassist.diario.process_entry",
+        "diario": "jassist.diario.process_diary_entry",
+        "journal": "jassist.diario.process_diary_entry",
+        "nota": "jassist.diario.process_diary_entry",
         
-        "tarefa": "jassist.tarefas.process_entry",
-        "task": "jassist.tarefas.process_entry",
-        "todo": "jassist.tarefas.process_entry",
+        "tarefa": "jassist.tarefas.process_task_entry",
+        "task": "jassist.tarefas.process_task_entry",
+        "todo": "jassist.tarefas.process_task_entry",
         
-        "entidade": "jassist.entidades.process_entry",
-        "organizacao": "jassist.entidades.process_entry",
-        "empresa": "jassist.entidades.process_entry",
+        "entidade": "jassist.entidades.extract_entities",
+        "organizacao": "jassist.entidades.extract_entities",
+        "empresa": "jassist.entidades.extract_entities",
         
-        "conta": "jassist.contas.process_entry",
-        "account": "jassist.contas.process_entry",
-        "financas": "jassist.contas.process_entry"
+        "conta": "jassist.contas.process_transaction_entry",
+        "account": "jassist.contas.process_transaction_entry",
+        "financas": "jassist.contas.process_transaction_entry"
     },
-    "default_module": "jassist.diario.process_entry",
+    "default_module": "jassist.diario.process_diary_entry",
     "debug_mode": false,
     "logging": {
         "level": "INFO",

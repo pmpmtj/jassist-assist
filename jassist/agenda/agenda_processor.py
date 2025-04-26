@@ -162,15 +162,22 @@ def process_agenda_entry(text: str, db_id: Optional[int] = None,
         # Step 5: Mark transcription as processed (if applicable)
         if db_id and event_id:
             try:
-                marcar_transcricao_processada(
-                    id_transcricao=db_id,
-                    destino_tabela="agenda",
-                    destino_id=event_id
-                )
-                logger.info(f"Marked transcription {db_id} as processed")
+                # Ensure db_id is an integer
+                if not isinstance(db_id, int):
+                    logger.warning(f"db_id is not an integer: {db_id}, skipping transcription marking")
+                    if event_data and isinstance(event_data, dict):
+                        event_data["warning"] = "db_id is not an integer, skipping transcription marking"
+                else:
+                    marcar_transcricao_processada(
+                        id_transcricao=db_id,
+                        destino_tabela="agenda",
+                        destino_id=event_id
+                    )
+                    logger.info(f"Marked transcription {db_id} as processed")
             except Exception as e:
                 logger.warning(f"Failed to mark transcription as processed: {e}")
-                event_data["warning"] = f"Failed to mark transcription: {str(e)}"
+                if event_data and isinstance(event_data, dict):
+                    event_data["warning"] = f"Failed to mark transcription: {str(e)}"
                 # Continue processing - this is not a critical error
         
         return True, event_data

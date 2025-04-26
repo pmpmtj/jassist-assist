@@ -55,12 +55,12 @@ def marcar_transcricao_processada(conn, id_transcricao, destino_tabela, destino_
         cur = conn.cursor()
         
         # Update the processing status
+        # Note: Column names must match the database schema
         cur.execute("""
         UPDATE transcricoes
         SET processado = TRUE,
-            data_processamento = NOW(),
-            destino_tabela = %s,
-            destino_id = %s
+            tabela_destino = %s,
+            id_destino = %s
         WHERE id = %s
         """, (destino_tabela, destino_id, id_transcricao))
         
