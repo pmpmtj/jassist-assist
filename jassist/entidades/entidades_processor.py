@@ -32,19 +32,43 @@ def save_entity_to_db(conn, entity_data: Dict[str, Any], transcription_id: Optio
         Tuple containing (success status, entity ID or error info)
     """
     try:
+        logger.debug(f"Saving entity to DB - Parameters: entity_data={type(entity_data)}, transcription_id={type(transcription_id)}")
+        
         cur = conn.cursor()
         
-        # Extract fields from entity data
+        # Extract and sanitize fields from entity data
         nome = entity_data.get('nome', '')
         if not nome:
             logger.error("Entity name is required")
             return False, {"error": "Entity name is required"}
             
+        # Handle case where nome is a dictionary
+        if isinstance(nome, dict):
+            logger.debug("Converting nome from dict to JSON string")
+            nome = json.dumps(nome)
+        elif nome is None:
+            nome = ''
+            
         tipo = entity_data.get('tipo', '')
+        if isinstance(tipo, dict):
+            logger.debug("Converting tipo from dict to JSON string")
+            tipo = json.dumps(tipo)
+        elif tipo is None:
+            tipo = ''
+            
         contexto = entity_data.get('contexto', '')
+        if isinstance(contexto, dict):
+            logger.debug("Converting contexto from dict to JSON string")
+            contexto = json.dumps(contexto)
+        elif contexto is None:
+            contexto = ''
         
         # Handle relevance score
         pontuacao_relevancia = entity_data.get('pontuacao_relevancia')
+        if isinstance(pontuacao_relevancia, dict):
+            logger.debug("Converting pontuacao_relevancia from dict to string first")
+            pontuacao_relevancia = json.dumps(pontuacao_relevancia)
+            
         try:
             pontuacao_relevancia = float(pontuacao_relevancia)
             # Ensure score is between 0 and 1
@@ -52,6 +76,8 @@ def save_entity_to_db(conn, entity_data: Dict[str, Any], transcription_id: Optio
         except (ValueError, TypeError):
             logger.warning(f"Invalid relevance score: {pontuacao_relevancia}, using 0.5 as default")
             pontuacao_relevancia = 0.5
+            
+        logger.debug(f"DB parameters - nome: {type(nome)}, tipo: {type(tipo)}, contexto: {type(contexto)}, pontuacao_relevancia: {type(pontuacao_relevancia)}")
         
         # Insert into database
         cur.execute("""
@@ -99,6 +125,26 @@ def process_entity_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool, 
         Tuple containing (success status, entity data or error info)
     """
     try:
+        # Debug - check parameter types directly
+        logger.debug(f"Processing entity entry - Input types: text: {type(text)}, db_id: {type(db_id)}")
+        
+        # Handle case where db_id is a dictionary
+        transcription_id = None
+        if isinstance(db_id, dict):
+            logger.debug(f"db_id is a dictionary with keys: {list(db_id.keys())}")
+            # Check for db_id key directly
+            if 'db_id' in db_id:
+                transcription_id = db_id.get('db_id')
+                logger.debug(f"Extracted transcription_id from 'db_id' key: {transcription_id}")
+            # Also check for id key as fallback
+            elif 'id' in db_id:
+                transcription_id = db_id.get('id')
+                logger.debug(f"Extracted transcription_id from 'id' key: {transcription_id}")
+        else:
+            transcription_id = db_id
+            
+        logger.debug(f"Using transcription_id: {transcription_id}")
+        
         logger.debug(f"Processing entity entry: {text[:50]}...")
         
         # Process with the assistant
@@ -120,7 +166,7 @@ def process_entity_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool, 
             return False, {"error": "Entity must have a name (nome)"}
         
         # Save to database
-        db_success, db_result = save_entity_to_db(entity_data=entity_data, transcription_id=db_id)
+        db_success, db_result = save_entity_to_db(entity_data=entity_data, transcription_id=transcription_id)
         if not db_success:
             logger.error("Failed to save entity to database")
             return False, db_result
