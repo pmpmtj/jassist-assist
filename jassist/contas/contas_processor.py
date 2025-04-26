@@ -10,7 +10,7 @@ import yaml
 import os
 import time
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Tuple, Optional, List, Union
 from datetime import datetime
 
 from jassist.logger_utils.logger_utils import setup_logger
@@ -217,13 +217,13 @@ def process_with_assistant(text: str) -> str:
 
 def parse_datetime(date_str: Optional[str]) -> Optional[datetime]:
     """
-    Parse a datetime string into a datetime object.
+    Parse a datetime string into a datetime object with timezone information.
     
     Args:
         date_str: Date string to parse or None
         
     Returns:
-        datetime object or None if parsing failed
+        datetime object with timezone info or None if parsing failed
     """
     if not date_str:
         return None
@@ -243,7 +243,18 @@ def parse_datetime(date_str: Optional[str]) -> Optional[datetime]:
     
     for fmt in formats:
         try:
-            return datetime.strptime(date_str, fmt)
+            dt = datetime.strptime(date_str, fmt)
+            # Check if the datetime has timezone info
+            if fmt.endswith('Z'):
+                # For 'Z' timezone strings (UTC), use proper timezone
+                from datetime import timezone
+                return dt.replace(tzinfo=timezone.utc)
+            elif not dt.tzinfo:
+                # If no timezone info, use local timezone
+                import pytz
+                local_tz = pytz.timezone('Europe/Lisbon')  # Adjust this to your local timezone
+                return local_tz.localize(dt)
+            return dt
         except ValueError:
             continue
             
@@ -285,7 +296,17 @@ def save_transaction_to_db(conn, transaction_data: Dict[str, Any], transcription
         # Handle date if provided
         data_str = transaction_data.get('data')
         data = parse_datetime(data_str)
+        
+        # If data is None, use current time with timezone
+        if data is None:
+            import pytz
+            local_tz = pytz.timezone('Europe/Lisbon')  # Adjust this to your local timezone
+            data = datetime.now(local_tz)
+            logger.debug(f"Using current datetime with timezone: {data}")
+        
+        # Format with timezone info for PostgreSQL timestamp with timezone
         data_db = data.isoformat() if data else None
+        logger.debug(f"Saving datetime to database: {data_db}")
         
         # Insert into database
         cur.execute("""
@@ -320,6 +341,64 @@ def save_transaction_to_db(conn, transaction_data: Dict[str, Any], transcription
         logger.error(error_msg)
         logger.error(traceback.format_exc())
         return False, {"error": error_msg, "traceback": traceback.format_exc()}
+
+def extract_db_id_from_metadata(db_id_param: Any) -> Optional[int]:
+    """
+    Extract database ID from various parameter formats.
+    
+    This function handles multiple formats that can contain a database ID:
+    - Direct integer values
+    - String values that can be converted to integers
+    - Dictionaries that may contain ID values under common key names
+    - Nested dictionaries with ID values in a 'raw_data' sub-dictionary
+    
+    Args:
+        db_id_param: The parameter that might contain a database ID
+            Can be an integer, string, or dictionary with various key structures
+        
+    Returns:
+        int: The extracted database ID, or None if not found or invalid
+        
+    Examples:
+        >>> extract_db_id_from_metadata(42)
+        42
+        >>> extract_db_id_from_metadata("42")
+        42
+        >>> extract_db_id_from_metadata({"db_id": 42})
+        42
+        >>> extract_db_id_from_metadata({"raw_data": {"id": 42}})
+        42
+        >>> extract_db_id_from_metadata(None)
+        None
+    """
+    # Handle simple cases
+    if db_id_param is None:
+        return None
+    if isinstance(db_id_param, int):
+        return db_id_param
+    if isinstance(db_id_param, str) and db_id_param.isdigit():
+        return int(db_id_param)
+    
+    # Handle dictionary cases
+    if isinstance(db_id_param, dict):
+        # Try various possible keys that might contain the ID
+        for key in ['id', 'db_id', 'transcription_id', 'transcricao_id']:
+            if key in db_id_param and isinstance(db_id_param[key], (int, str)):
+                if isinstance(db_id_param[key], str) and db_id_param[key].isdigit():
+                    return int(db_id_param[key])
+                elif isinstance(db_id_param[key], int):
+                    return db_id_param[key]
+                    
+        # Check if ID might be nested in raw_data
+        if 'raw_data' in db_id_param and isinstance(db_id_param['raw_data'], dict):
+            for key in ['id', 'db_id', 'transcription_id', 'transcricao_id']:
+                if key in db_id_param['raw_data'] and isinstance(db_id_param['raw_data'][key], (int, str)):
+                    if isinstance(db_id_param['raw_data'][key], str) and db_id_param['raw_data'][key].isdigit():
+                        return int(db_id_param['raw_data'][key])
+                    elif isinstance(db_id_param['raw_data'][key], int):
+                        return db_id_param['raw_data'][key]
+    
+    return None
 
 def process_transaction_entry(text: str, db_id: Optional[int] = None) -> Tuple[bool, Dict[str, Any]]:
     """
@@ -358,8 +437,11 @@ def process_transaction_entry(text: str, db_id: Optional[int] = None) -> Tuple[b
             logger.error("Transaction data missing required valor field")
             return False, {"error": "Transaction must have valor field (numerical amount)"}
             
+        # Extract database ID from the parameter
+        safe_db_id = extract_db_id_from_metadata(db_id)
+        
         # Save to database
-        db_success, db_result = save_transaction_to_db(transaction_data, transcription_id=db_id)
+        db_success, db_result = save_transaction_to_db(transaction_data, transcription_id=safe_db_id)
         if not db_success:
             logger.error("Failed to save transaction to database")
             return False, db_result

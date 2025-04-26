@@ -12,9 +12,9 @@
         "journal": "jassist.diario.process_diary_entry",
         "nota": "jassist.diario.process_diary_entry",
         
-        "tarefa": "jassist.tarefas.process_task_entry",
-        "task": "jassist.tarefas.process_task_entry",
-        "todo": "jassist.tarefas.process_task_entry",
+        "tarefa": "jassist.tarefas.process_entry",
+        "task": "jassist.tarefas.process_entry",
+        "todo": "jassist.tarefas.process_entry",
         
         "entidade": "jassist.entidades.extract_entities",
         "organizacao": "jassist.entidades.extract_entities",
