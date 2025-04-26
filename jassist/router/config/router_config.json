@@ -1,0 +1,33 @@
+{
+    "module_mapping": {
+        "agenda": "jassist.agenda.process_entry",
+        "calendario": "jassist.agenda.process_entry",
+        "evento": "jassist.agenda.process_entry",
+        
+        "contacto": "jassist.contactos.process_entry",
+        "pessoa": "jassist.contactos.process_entry",
+        "contato": "jassist.contactos.process_entry",
+        
+        "diario": "jassist.diario.process_entry",
+        "journal": "jassist.diario.process_entry",
+        "nota": "jassist.diario.process_entry",
+        
+        "tarefa": "jassist.tarefas.process_entry",
+        "task": "jassist.tarefas.process_entry",
+        "todo": "jassist.tarefas.process_entry",
+        
+        "entidade": "jassist.entidades.process_entry",
+        "organizacao": "jassist.entidades.process_entry",
+        "empresa": "jassist.entidades.process_entry",
+        
+        "conta": "jassist.contas.process_entry",
+        "account": "jassist.contas.process_entry",
+        "financas": "jassist.contas.process_entry"
+    },
+    "default_module": "jassist.diario.process_entry",
+    "debug_mode": false,
+    "logging": {
+        "level": "INFO",
+        "log_filename": "router.log"
+    }
+}

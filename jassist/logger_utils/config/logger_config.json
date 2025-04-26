@@ -49,6 +49,14 @@
             "agenda": {
                 "level": "DEBUG",
                 "log_filename": "agenda.log"
+            },
+            "router": {
+                "level": "DEBUG",
+                "log_filename": "router.log"
+            },
+            "pipeline": {
+                "level": "DEBUG",
+                "log_filename": "pipeline.log"
             }
         },
         "validate_format": true

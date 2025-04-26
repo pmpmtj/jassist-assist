@@ -164,7 +164,7 @@ def process_agenda_entry(text: str, db_id: Optional[int] = None,
             try:
                 marcar_transcricao_processada(
                     id_transcricao=db_id,
-                    destino_tabela="eventos_calendario",
+                    destino_tabela="agenda",
                     destino_id=event_id
                 )
                 logger.info(f"Marked transcription {db_id} as processed")

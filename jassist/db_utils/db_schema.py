@@ -28,7 +28,7 @@ def create_tables(conn):
                     coalesce(NEW.prioridade, '') ||
                     coalesce(NEW.estado, '')
                 );
-            ELSIF nome_tabela = 'eventos_calendario' THEN
+            ELSIF nome_tabela = 'agenda' THEN
                 NEW.vetor_pesquisa := to_tsvector('portuguese',
                     coalesce(NEW.resumo, '') ||
                     coalesce(NEW.descricao, '') ||
@@ -109,7 +109,7 @@ def create_tables(conn):
         """)
 
         cur.execute("""
-        CREATE TABLE IF NOT EXISTS eventos_calendario (
+        CREATE TABLE IF NOT EXISTS agenda (
             id SERIAL PRIMARY KEY,
             resumo TEXT,
             localizacao TEXT,
@@ -130,23 +130,23 @@ def create_tables(conn):
         )
         """)
         cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_eventos_inicio ON eventos_calendario(inicio_data_hora)
+        CREATE INDEX IF NOT EXISTS idx_eventos_inicio ON agenda(inicio_data_hora)
         """)
         cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_eventos_fim ON eventos_calendario(fim_data_hora)
+        CREATE INDEX IF NOT EXISTS idx_eventos_fim ON agenda(fim_data_hora)
         """)
         cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_eventos_intervalo ON eventos_calendario(inicio_data_hora, fim_data_hora)
+        CREATE INDEX IF NOT EXISTS idx_eventos_intervalo ON agenda(inicio_data_hora, fim_data_hora)
         """)
         cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_eventos_vetor_pesquisa ON eventos_calendario USING GIN(vetor_pesquisa)
+        CREATE INDEX IF NOT EXISTS idx_eventos_vetor_pesquisa ON agenda USING GIN(vetor_pesquisa)
         """)
         cur.execute("""
-        DROP TRIGGER IF EXISTS trg_atualizar_vetor_eventos ON eventos_calendario;
+        DROP TRIGGER IF EXISTS trg_atualizar_vetor_eventos ON agenda;
         """)
         cur.execute("""
         CREATE TRIGGER trg_atualizar_vetor_eventos
-        BEFORE INSERT OR UPDATE ON eventos_calendario
+        BEFORE INSERT OR UPDATE ON agenda
         FOR EACH ROW EXECUTE FUNCTION atualizar_vetor_pesquisa()
         """)
 

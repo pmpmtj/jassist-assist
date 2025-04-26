@@ -21,7 +21,7 @@ This module allows you to process natural language text into structured calendar
 
 The module requires a PostgreSQL database with the following tables:
 
-1. `eventos_calendario` - Stores calendar events
+1. `agenda` - Stores calendar events
 2. `transcricoes` - Tracks voice transcriptions (optional)
 
 ### Google Calendar API Setup

@@ -140,7 +140,7 @@ def _save_agenda_event_to_db_direct(
         
         # Insert the event - corrected for the actual database schema
         cur.execute("""
-        INSERT INTO eventos_calendario
+        INSERT INTO agenda
         (resumo, descricao, localizacao, 
          inicio_data_hora, inicio_fuso_horario,
          fim_data_hora, fim_fuso_horario,
