@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "scheduler": {
+    "runs_per_day": 1440,
+    "daily_task_hour": 16,
+    "daily_task_minute": 13,
+    "description": "Configuration for Voice Diary scheduler"
+  },
+  "pipeline": {
+    "enable_notifications": false,
+    "retry_on_failure": true,
+    "max_retries": 3
+  }
+}

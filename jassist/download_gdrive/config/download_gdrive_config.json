@@ -9,7 +9,7 @@
     "download": {
         "add_timestamps": true,
         "timestamp_format": "%Y%m%d_%H%M%S_%f",
-        "delete_after_download": false,
+        "delete_after_download": true,
         "dry_run": false
     }
 }

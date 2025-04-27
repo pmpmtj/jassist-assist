@@ -53,10 +53,14 @@
             "router": {
                 "level": "DEBUG",
                 "log_filename": "router.log"
+                },
+                "pipeline": {
+                    "level": "DEBUG",
+                    "log_filename": "pipeline.log"
             },
-            "pipeline": {
+            "scheduler": {
                 "level": "DEBUG",
-                "log_filename": "pipeline.log"
+                "log_filename": "scheduler.log"
             }
         },
         "validate_format": true
