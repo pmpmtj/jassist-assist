@@ -74,6 +74,23 @@ def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
         try:
             data = json.loads(result)
             logger.debug("Successfully parsed classification result as JSON")
+            
+            # Handle nested structures like {"classifications": [{"text": "...", "category": "..."}]}
+            if "classifications" in data and isinstance(data["classifications"], list) and len(data["classifications"]) > 0:
+                logger.debug("Found classifications array in JSON result")
+                # Use the first classification entry
+                classification_entry = data["classifications"][0]
+                # If it contains a category field, use that
+                if "category" in classification_entry:
+                    logger.debug(f"Using category from classifications array: {classification_entry['category']}")
+                    # Create a new dictionary with the category at the top level
+                    return {
+                        "category": classification_entry["category"],
+                        "text": classification_entry.get("text", ""),
+                        "original_data": data  # Keep the original data
+                    }
+            
+            # If no nested structure, return the data as is
             return data
         except json.JSONDecodeError:
             logger.debug("Classification result is not valid JSON, trying text parsing")
