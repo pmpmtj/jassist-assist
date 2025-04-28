@@ -4,7 +4,7 @@ prompts:
   assistant_instructions:
     template: |
       "Leia atentamente o conteúdo do campo 'entry_content'. Separe-o em diferentes contextos sempre que identificar uma mudança de assunto, ação, entidade ou foco.\n\n"
-
+      "A entry_content poderá conter informação relativa a classificação, como por exemplo: 'agenda', 'diario', 'tarefas', 'contas', 'contactos', 'entidades'; usar essa informação para ajudar a classificar o conteúdo.\n"
       "Para cada contexto identificado, siga estas diretivas:\n"
 
       "1. Cada contexto só pode conter uma etiqueta.\n"
@@ -36,7 +36,7 @@ prompts:
   assistant_instructions_json:
     template: |
       "Leia atentamente o conteúdo do campo 'entry_content'. Separe-o em diferentes contextos sempre que identificar uma mudança de assunto, ação, entidade ou foco.\n\n"
-
+      "A entry_content poderá conter informação relativa a classificação, como por exemplo: 'agenda', 'diario', 'tarefas', 'contas', 'contactos', 'entidades'; usar essa informação para ajudar a classificar o conteúdo.\n"
       "Para cada contexto identificado, siga estas diretivas:\n"
 
       "1. Cada contexto só pode conter uma etiqueta.\n"
@@ -71,8 +71,9 @@ prompts:
 
   parse_entry_prompt:
     template: |
-      "Leia com atenção o seguinte conteúdo e separe-o em diferentes contextos sempre que aplicável."
-      Atenção que, se existir uma tarefa, normalmente há (com exceções) um evento associado\n"
-      esteja atento a múltiplas etiquetas numa só frase\n 
-      - ex: Esta manhã acordei às 7h, fui tomar o pequeno-almoço e gastei 10 euros no pequeno-almoço. tem as tags diario e contas\n\n"
-      Texto: {entry_content}
+      "Leia com atenção o seguinte conteúdo e separe-o em diferentes contextos e classifica-os."
+      "A entry_content poderá conter informação relativa a classificação, como por exemplo: 'agenda', 'diario', 'tarefas', 'contas', 'contactos', 'entidades'; usar essa informação para ajudar a classificar o conteúdo.\n"
+      "Atenção que, se existir uma tarefa, normalmente há (com exceções) um evento associado\n"
+      "esteja atento a múltiplas etiquetas numa só frase\n 
+        - ex: Esta manhã acordei às 7h, fui tomar o pequeno-almoço e gastei 10 euros no pequeno-almoço. tem as tags diario e contas\n\n"
+      "Texto: {entry_content}"
