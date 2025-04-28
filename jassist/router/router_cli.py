@@ -70,16 +70,32 @@ def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
         Dict containing category and other metadata, or None if parsing failed
     """
     try:
+        # Log the raw input
+        logger.debug(f"Raw classification result: {result[:200]}...")
+        
+        # Clean the input if it contains markdown code blocks
+        if "```json" in result:
+            logger.debug("Detected markdown JSON code block, extracting JSON content")
+            # Extract JSON from markdown code blocks
+            start_marker = "```json"
+            end_marker = "```"
+            start_pos = result.find(start_marker) + len(start_marker)
+            end_pos = result.find(end_marker, start_pos)
+            if start_pos > len(start_marker) - 1 and end_pos > start_pos:
+                result = result[start_pos:end_pos].strip()
+                logger.debug(f"Extracted JSON: {result[:200]}...")
+        
         # Try parsing as JSON first
         try:
             data = json.loads(result)
-            logger.debug("Successfully parsed classification result as JSON")
+            logger.debug(f"Successfully parsed JSON data: {json.dumps(data, indent=2)[:200]}...")
             
             # Handle nested structures like {"classifications": [{"text": "...", "category": "..."}]}
             if "classifications" in data and isinstance(data["classifications"], list) and len(data["classifications"]) > 0:
-                logger.debug("Found classifications array in JSON result")
+                logger.debug(f"Found classifications array in JSON result with {len(data['classifications'])} items")
                 # Use the first classification entry
                 classification_entry = data["classifications"][0]
+                logger.debug(f"First classification entry: {classification_entry}")
                 # If it contains a category field, use that
                 if "category" in classification_entry:
                     logger.debug(f"Using category from classifications array: {classification_entry['category']}")
@@ -89,11 +105,16 @@ def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
                         "text": classification_entry.get("text", ""),
                         "original_data": data  # Keep the original data
                     }
+                else:
+                    logger.warning(f"No 'category' field found in classification entry: {classification_entry}")
+            else:
+                logger.debug("No 'classifications' array found in JSON data")
             
             # If no nested structure, return the data as is
             return data
-        except json.JSONDecodeError:
-            logger.debug("Classification result is not valid JSON, trying text parsing")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Classification result is not valid JSON: {e}")
+            logger.debug("Trying text parsing instead")
         
         # If not JSON, try to parse as text
         lines = result.strip().split('\n')
@@ -119,7 +140,8 @@ def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
         return data
         
     except Exception as e:
-        logger.error(f"Error parsing classification result: {e}")
+        logger.error(f"Error parsing classification result: {str(e)}")
+        logger.debug(f"Exception details", exc_info=True)
         return None
 
 def route_to_module(category: str, input_data: str, metadata: Dict[str, Any]) -> bool:

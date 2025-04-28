@@ -159,6 +159,15 @@ def insert_event_into_google_agenda(event_data: Dict[str, Any]) -> Optional[str]
     
     agenda_id = config.get('google_agenda', {}).get('agenda_id', 'primary')
     logger.debug(f"Using calendar ID: {agenda_id}")
+    
+    # Check and fix attendees with missing email addresses
+    if "attendees" in event_data and event_data["attendees"]:
+        logger.debug(f"Checking {len(event_data['attendees'])} attendees for missing email addresses")
+        for i, attendee in enumerate(event_data["attendees"]):
+            if not attendee.get("email"):
+                logger.warning(f"Attendee #{i+1} missing email, adding dummy email: dummy@example.com")
+                attendee["email"] = "dummy@example.com"
+    
     logger.debug(f"Event data for Google Calendar: {event_data}")
     
     try:
