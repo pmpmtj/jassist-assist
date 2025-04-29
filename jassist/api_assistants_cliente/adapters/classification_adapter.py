@@ -7,7 +7,6 @@ using the OpenAI Assistant Client.
 
 from pathlib import Path
 import time
-import hashlib
 from typing import Dict, Any, Optional, List, Union, Literal
 
 from jassist.logger_utils.logger_utils import setup_logger
@@ -24,10 +23,8 @@ logger = setup_logger("classification_adapter", module="api_assistants_cliente")
 _CONFIG_CACHE = {}
 _PROMPTS_CACHE = {}
 
-# Thread pool for reusing threads based on task type
-_THREAD_POOL = {}
-# Maximum number of threads to keep in pool per response format
-_MAX_POOL_SIZE = 3
+# Persistent thread key to use
+PERSISTENT_THREAD_KEY = "persistent"
 
 class ClassificationAdapter:
     """
@@ -39,8 +36,7 @@ class ClassificationAdapter:
         client: Optional[OpenAIAssistantClient] = None,
         config_file: Optional[Path] = None,
         prompts_file: Optional[Path] = None,
-        use_cache: bool = True,
-        use_thread_pool: bool = True
+        use_cache: bool = True
     ):
         """
         Initialize the classification assistant adapter.
@@ -50,14 +46,12 @@ class ClassificationAdapter:
             config_file: Optional path to a specific config file
             prompts_file: Optional path to a specific prompts file
             use_cache: Whether to use cached configurations and prompts
-            use_thread_pool: Whether to use thread pooling for improved performance
             
         Raises:
             ConfigError: If required configuration or prompt files are missing
         """
         # Module name for this adapter
         self.module_name = "classification"
-        self.use_thread_pool = use_thread_pool
         
         # Resolve prompts file path if provided
         self.prompts_key = None
@@ -96,15 +90,6 @@ class ClassificationAdapter:
                 module_name=self.module_name
             )
         
-        # Get default response format from config
-        self.default_response_format = "text"
-        if self.config and "default_response_format" in self.config:
-            format_value = self.config["default_response_format"]
-            if format_value in ["text", "json"]:
-                self.default_response_format = format_value
-            else:
-                logger.warning(f"Invalid default_response_format in config: {format_value}, using 'text'")
-        
         # Load prompts - use either the provided file or the module's config file
         if prompts_file:
             prompts_path = prompts_file
@@ -136,70 +121,6 @@ class ClassificationAdapter:
         _CONFIG_CACHE.clear()
         _PROMPTS_CACHE.clear()
         logger.debug("Cleared all classification adapter caches")
-    
-    @staticmethod
-    def clear_thread_pool():
-        """
-        Clear the thread pool, forcing the creation of new threads.
-        Useful when thread content might be affecting classification results.
-        """
-        global _THREAD_POOL
-        _THREAD_POOL.clear()
-        logger.debug("Cleared classification thread pool")
-    
-    def _get_thread_from_pool(self, assistant_id: str) -> Optional[str]:
-        """
-        Get a thread ID from the thread pool for the given assistant.
-        
-        Args:
-            assistant_id: The OpenAI assistant ID
-            
-        Returns:
-            Optional[str]: A thread ID if available, None otherwise
-        """
-        if not self.use_thread_pool:
-            return None
-            
-        pool_key = f"{assistant_id}_json"
-        threads = _THREAD_POOL.get(pool_key, [])
-        
-        if threads:
-            # Get the oldest thread (FIFO)
-            thread_id = threads.pop(0)
-            logger.debug(f"Reusing thread {thread_id} from pool for {pool_key}")
-            
-            # Put it back at the end (for round-robin reuse)
-            threads.append(thread_id)
-            _THREAD_POOL[pool_key] = threads
-            
-            return thread_id
-        
-        return None
-    
-    def _add_thread_to_pool(self, thread_id: str, assistant_id: str):
-        """
-        Add a thread ID to the thread pool.
-        
-        Args:
-            thread_id: The thread ID to add
-            assistant_id: The OpenAI assistant ID
-        """
-        if not self.use_thread_pool:
-            return
-            
-        pool_key = f"{assistant_id}_json"
-        threads = _THREAD_POOL.get(pool_key, [])
-        
-        # Only add if not already in the pool
-        if thread_id not in threads:
-            threads.append(thread_id)
-            
-            # Limit pool size
-            if len(threads) > _MAX_POOL_SIZE:
-                threads = threads[-_MAX_POOL_SIZE:]
-            
-            _THREAD_POOL[pool_key] = threads
-            logger.debug(f"Added thread {thread_id} to pool for {pool_key}")
     
     def _load_prompt_file(self, prompts_path: Path) -> Dict[str, Any]:
         """
@@ -274,9 +195,6 @@ class ClassificationAdapter:
         start_time = time.time()
         
         try:
-            # Always use JSON format
-            response_format = "json"
-                
             # Extract text content if input is a dictionary
             if isinstance(text, dict):
                 content = text.get("text", "")
@@ -300,9 +218,8 @@ class ClassificationAdapter:
             # Get or create assistant
             assistant_id, _ = self.client.get_or_create_assistant()
             
-            # Get thread ID - either from pool or create new
+            # Get thread ID - either create new or use persistent thread
             thread_id = None
-            thread_key = "default"
             
             if force_new_thread:
                 # Use a unique thread key to force creation of a new thread
@@ -314,17 +231,13 @@ class ClassificationAdapter:
                     thread_key=thread_key, 
                     save_to_config=False
                 )
-            elif self.use_thread_pool:
-                # Try to get a thread from our pool
-                thread_id = self._get_thread_from_pool(assistant_id)
-            
-            if not thread_id:
-                # Get or create a thread with the appropriate key
-                thread_id = self.client.get_or_create_thread(thread_key=thread_key)
-                
-                # Add to thread pool if using pool and not forcing new
-                if self.use_thread_pool and not force_new_thread:
-                    self._add_thread_to_pool(thread_id, assistant_id)
+            else:
+                # Always use the persistent thread key
+                thread_id = self.client.get_or_create_thread(
+                    thread_key=PERSISTENT_THREAD_KEY,
+                    save_to_config=True  # Ensure it's saved to config
+                )
+                logger.debug(f"Using persistent thread with key: {PERSISTENT_THREAD_KEY}")
             
             logger.info(f"Using assistant ID: {assistant_id}")
             logger.info(f"Using thread ID: {thread_id}")

@@ -27,8 +27,7 @@ class ClassificationProcessor:
     def __init__(
         self, 
         config_file: Optional[Path] = None, 
-        prompts_file: Optional[Path] = None,
-        use_thread_pool: bool = True
+        prompts_file: Optional[Path] = None
     ):
         """
         Initialize the classification processor with the adapter.
@@ -36,7 +35,6 @@ class ClassificationProcessor:
         Args:
             config_file: Optional path to a specific config file
             prompts_file: Optional path to a specific prompts file
-            use_thread_pool: Whether to use thread pooling for improved performance
         """
         # Set default config paths if none provided
         if not config_file:
@@ -49,8 +47,7 @@ class ClassificationProcessor:
         self.adapter = ClassificationAdapter(
             config_file=config_file,
             prompts_file=prompts_file,
-            use_cache=True,
-            use_thread_pool=use_thread_pool
+            use_cache=True
         )
         
         logger.debug("ClassificationProcessor initialized")
@@ -98,20 +95,11 @@ class ClassificationProcessor:
         """
         ClassificationAdapter.clear_cache()
         logger.debug("Cleared all classification caches")
-    
-    @staticmethod
-    def clear_thread_pool():
-        """
-        Clear the thread pool, forcing the creation of new threads.
-        """
-        ClassificationAdapter.clear_thread_pool()
-        logger.debug("Cleared classification thread pool")
 
 
 def get_processor(
     config_file: Optional[Path] = None, 
-    prompts_file: Optional[Path] = None,
-    use_thread_pool: bool = True
+    prompts_file: Optional[Path] = None
 ) -> ClassificationProcessor:
     """
     Get or create a singleton instance of the ClassificationProcessor.
@@ -119,7 +107,6 @@ def get_processor(
     Args:
         config_file: Optional path to a specific config file
         prompts_file: Optional path to a specific prompts file
-        use_thread_pool: Whether to use thread pooling for improved performance
         
     Returns:
         ClassificationProcessor: The singleton processor instance
@@ -129,8 +116,7 @@ def get_processor(
     if _processor_instance is None:
         _processor_instance = ClassificationProcessor(
             config_file=config_file,
-            prompts_file=prompts_file,
-            use_thread_pool=use_thread_pool
+            prompts_file=prompts_file
         )
         logger.debug("Created singleton ClassificationProcessor instance")
     elif config_file is not None or prompts_file is not None:
@@ -139,8 +125,7 @@ def get_processor(
         logger.debug("Creating custom ClassificationProcessor instance with specified config")
         return ClassificationProcessor(
             config_file=config_file,
-            prompts_file=prompts_file,
-            use_thread_pool=use_thread_pool
+            prompts_file=prompts_file
         )
     
     return _processor_instance
@@ -150,8 +135,7 @@ def classify_text(
     text: Union[str, Dict[str, Any]], 
     config_file: Optional[Path] = None,
     prompts_file: Optional[Path] = None,
-    force_new_thread: bool = False,
-    use_thread_pool: bool = True
+    force_new_thread: bool = False
 ) -> Optional[str]:
     """
     Global function to classify text using the classification processor.
@@ -161,7 +145,6 @@ def classify_text(
         config_file: Optional path to a specific config file
         prompts_file: Optional path to a specific prompts file
         force_new_thread: Force creation of a new thread instead of reusing
-        use_thread_pool: Whether to use thread pooling for improved performance
         
     Returns:
         Optional[str]: Classification result or None if classification failed
@@ -169,8 +152,7 @@ def classify_text(
     # Get or create the processor instance
     processor = get_processor(
         config_file, 
-        prompts_file,
-        use_thread_pool=use_thread_pool
+        prompts_file
     )
     
     # Classify the text
