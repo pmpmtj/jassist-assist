@@ -24,9 +24,5 @@
         "account": "jassist.contas.process_transaction_entry",
         "financas": "jassist.contas.process_transaction_entry"
     },
-    "debug_mode": false,
-    "logging": {
-        "level": "INFO",
-        "log_filename": "router.log"
-    }
+    "debug_mode": false
 }
