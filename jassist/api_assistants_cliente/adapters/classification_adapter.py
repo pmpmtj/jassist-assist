@@ -23,7 +23,9 @@ logger = setup_logger("classification_adapter", module="api_assistants_cliente")
 _CONFIG_CACHE = {}
 _PROMPTS_CACHE = {}
 
-# Persistent thread key to use
+# Persistent thread key for maintaining conversation context across multiple
+# classification requests. This improves classification consistency and reduces
+# token usage by leveraging previous context.
 PERSISTENT_THREAD_KEY = "persistent"
 
 class ClassificationAdapter:
