@@ -1,4 +1,3 @@
-import logging
 import json
 import time
 from pathlib import Path
@@ -26,29 +25,41 @@ def transcribe_file(
         return None
 
     logger.info(f"Beginning transcription for: {file_path.name}")
+    
+    # Only perform expensive JSON serialization if debug logging is enabled
+    if logger.isEnabledFor(10):  # DEBUG level is 10
+        logger.debug(f"Using configuration: {json.dumps({k: v for k, v in config.items() if k != 'model'}, default=str)}")
+    
     duration = calculate_duration(file_path)
     logger.info(f"Estimated duration: {duration:.2f} seconds")
 
-    max_duration = config.get("cost_management", {}).get("max_audio_duration_seconds", 300)
-    if duration and duration > max_duration:
+    # Get cost management settings
+    cost_config = config.get("cost_management", {})
+    max_duration = cost_config.get("max_audio_duration_seconds", 300)
+    warn_on_large = cost_config.get("warn_on_large_files", True)
+    
+    # Only warn if configured to do so
+    if duration and duration > max_duration and warn_on_large:
         logger.warning(f"Audio exceeds max allowed ({max_duration}s). Proceeding with caution...")
 
-    model_name = get_transcription_model(config)
+    # Get model configuration once and extract all needed values
     model_config = config.get("model", {})
-   
-    language = model_config.get("language") 
-    prompt = model_config.get("prompt") 
-    # Prioritize model-specific response_format over default
-    response_format = model_config.get("response_format") 
+    model_name = get_transcription_model(config)
+    language = model_config.get("language")
+    prompt = model_config.get("prompt")
+    response_format = model_config.get("response_format", "json")
 
-    logger.info(f"Using model: {model_name}")
+    logger.debug(f"Using model: {model_name}")
     if prompt:
-        logger.info(f"Using prompt: {prompt}")
-    logger.info(f"Using response format: {response_format}")
+        logger.debug(f"Using prompt: {prompt}")
+    if language:
+        logger.debug(f"Using language: {language}")
+    logger.debug(f"Using response format: {response_format}")
 
     try:
         start_time = time.time()
         with open(file_path, "rb") as audio_file:
+            # Build parameters dictionary with only valid parameters
             params = {
                 "model": model_name,
                 "file": audio_file,
@@ -60,21 +71,22 @@ def transcribe_file(
             if language:
                 params["language"] = language
 
+            logger.debug(f"Calling OpenAI API with parameters: {', '.join([f'{k}={v if k != 'file' else 'FILE_CONTENT'}' for k, v in params.items()])}")
             response = client.audio.transcriptions.create(**params)
 
         end_time = time.time()
         time_diff = end_time - start_time
         # Avoid division by zero
-        if time_diff > 0:
-            speed = duration / time_diff if duration else 0
+        if duration and time_diff > 0:
+            speed = duration / time_diff
             logger.info(f"Transcription done in {time_diff:.2f}s ({speed:.2f}x real-time)")
         else:
-            logger.info(f"Transcription completed instantly")
+            logger.info(f"Transcription completed in {time_diff:.2f}s")
 
-        # Return raw dict (OpenAI Object is pydantic-based)
-        if hasattr(response, 'model_dump'):
-            return response.model_dump()
-        return response
+        # Return response as dictionary (handles both pydantic and dict responses)
+        result = response.model_dump() if hasattr(response, 'model_dump') else response
+        logger.debug(f"Received transcription with {len(result.get('text', '')) if isinstance(result, dict) else 0} characters")
+        return result
 
     except Exception as e:
         logger.error(f"Transcription failed: {e}", exc_info=True)

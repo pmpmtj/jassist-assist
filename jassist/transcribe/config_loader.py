@@ -28,14 +28,35 @@ def convert_string_booleans(config_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 def load_config() -> Dict[str, Any]:
     """Load or create the transcription config."""
-    if CONFIG_PATH.exists():
-        try:
-            with open(CONFIG_PATH, "r", encoding=ENCODING) as f:
-                config = json.load(f)
-            logger.info(f"Loaded transcription config from: {CONFIG_PATH}")
-            return convert_string_booleans(config)
-        except Exception as e:
-            logger.warning(f"Failed to parse config: {e}")
+    if not CONFIG_PATH.exists():
+        logger.warning(f"Config file not found at: {CONFIG_PATH}")
+        return {}
+        
+    try:
+        with open(CONFIG_PATH, "r", encoding=ENCODING) as f:
+            config = json.load(f)
+        logger.info(f"Loaded transcription config from: {CONFIG_PATH}")
+        
+        # Validate essential config sections
+        if "model" not in config:
+            logger.warning("Model section missing in config. Using defaults.")
+            config["model"] = {"name": "gpt-4o-mini-transcribe"}
+            
+        if "paths" not in config:
+            logger.warning("Paths section missing in config. Using defaults.")
+            config["paths"] = {"output_dir": "./transcriptions"}
+            
+        if "cost_management" not in config:
+            logger.warning("Cost management section missing in config. Using defaults.")
+            config["cost_management"] = {
+                "max_audio_duration_seconds": 300,
+                "warn_on_large_files": True
+            }
+            
+        return convert_string_booleans(config)
+    except Exception as e:
+        logger.error(f"Failed to parse config: {e}")
+        return {}
 
 def load_environment():
     """Load .env file for API keys and database config."""

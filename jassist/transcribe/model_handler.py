@@ -8,8 +8,10 @@ logger = setup_logger("model_handler", module="transcribe")
 try:
     from openai import OpenAI
     OPENAI_AVAILABLE = True
+    logger.debug("OpenAI module imported successfully")
 except ImportError:
     OPENAI_AVAILABLE = False
+    logger.warning("Failed to import OpenAI module - transcription functionality will be limited")
 
 def get_transcription_model(config: Dict[str, Any]) -> str:
     """
@@ -17,7 +19,9 @@ def get_transcription_model(config: Dict[str, Any]) -> str:
     """
     fallback_model = "gpt-4o-mini-transcribe"
     
-    logger.info("Fetching transcription model from config...")
+    if not config:
+        logger.warning("Config object is empty or None. Using fallback model.")
+        return fallback_model
     
     model_config = config.get("model", {})
     if not model_config:
@@ -25,7 +29,7 @@ def get_transcription_model(config: Dict[str, Any]) -> str:
         return fallback_model
     
     model_name = model_config.get("name", fallback_model)
-    logger.info(f"Using model: {model_name}")
+    logger.debug(f"Selected model: {model_name}")
     return model_name
 
 def get_openai_client() -> Optional["OpenAI"]:
@@ -43,7 +47,7 @@ def get_openai_client() -> Optional["OpenAI"]:
 
     try:
         client = OpenAI(api_key=api_key)
-        logger.info("OpenAI client successfully initialized.")
+        logger.debug("OpenAI client successfully initialized")
         return client
     except Exception as e:
         logger.error(f"Failed to initialize OpenAI client: {e}")
