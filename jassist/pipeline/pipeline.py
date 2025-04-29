@@ -129,7 +129,7 @@ def run_pipeline() -> bool:
             
             # Step 3: Classify the text
             logger.info(f"Classifying content from: {transcription_file.name}")
-            classification_result = classify_text(transcription_content, response_format="json")
+            classification_result = classify_text(transcription_content)
             
             if not classification_result:
                 logger.error(f"Classification failed for file: {transcription_file.name}")
