@@ -32,21 +32,13 @@ def load_config() -> Dict[str, Any]:
         Dict containing the router configuration
     """
     try:
-        if not CONFIG_PATH.exists():
-            logger.warning(f"Config file not found: {CONFIG_PATH}, using default configuration")
+        if not Path(CONFIG_PATH).exists():
+            logger.error(f"Router config file not found: {CONFIG_PATH}")
             return {
-                "module_mapping": {
-                    "agenda": "jassist.agenda.process_entry",
-                    "contacto": "jassist.contactos.process_entry",
-                    "diario": "jassist.diario.process_entry",
-                    "tarefa": "jassist.tarefas.process_entry",
-                    "entidade": "jassist.entidades.process_entry",
-                    "conta": "jassist.contas.process_entry",
-                    # Add other mappings as needed
-                },
-                "default_module": "jassist.diario.process_entry"
+                "module_mapping": {},
+                "debug_mode": False
             }
-        
+            
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             config = json.load(f)
             logger.debug(f"Loaded router configuration from {CONFIG_PATH}")
@@ -56,7 +48,7 @@ def load_config() -> Dict[str, Any]:
         # Return a minimal default configuration
         return {
             "module_mapping": {},
-            "default_module": "jassist.diario.process_entry"
+            "debug_mode": False
         }
 
 def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
@@ -73,10 +65,9 @@ def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
         # Log the raw input
         logger.debug(f"Raw classification result: {result[:200]}...")
         
-        # Clean the input if it contains markdown code blocks
+        # Extract JSON from markdown code blocks if present
         if "```json" in result:
             logger.debug("Detected markdown JSON code block, extracting JSON content")
-            # Extract JSON from markdown code blocks
             start_marker = "```json"
             end_marker = "```"
             start_pos = result.find(start_marker) + len(start_marker)
@@ -85,36 +76,31 @@ def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
                 result = result[start_pos:end_pos].strip()
                 logger.debug(f"Extracted JSON: {result[:200]}...")
         
-        # Try parsing as JSON first
+        # Try parsing as JSON
         try:
             data = json.loads(result)
-            logger.debug(f"Successfully parsed JSON data: {json.dumps(data, indent=2)[:200]}...")
+            logger.debug(f"Successfully parsed JSON data")
             
-            # Handle nested structures like {"classifications": [{"text": "...", "category": "..."}]}
-            if "classifications" in data and isinstance(data["classifications"], list) and len(data["classifications"]) > 0:
-                logger.debug(f"Found classifications array in JSON result with {len(data['classifications'])} items")
-                # Use the first classification entry
+            # Handle nested classifications structure
+            if "classifications" in data and isinstance(data["classifications"], list) and data["classifications"]:
                 classification_entry = data["classifications"][0]
-                logger.debug(f"First classification entry: {classification_entry}")
-                # If it contains a category field, use that
                 if "category" in classification_entry:
-                    logger.debug(f"Using category from classifications array: {classification_entry['category']}")
-                    # Create a new dictionary with the category at the top level
                     return {
                         "category": classification_entry["category"],
                         "text": classification_entry.get("text", ""),
-                        "original_data": data  # Keep the original data
+                        "original_data": data
                     }
-                else:
-                    logger.warning(f"No 'category' field found in classification entry: {classification_entry}")
-            else:
-                logger.debug("No 'classifications' array found in JSON data")
             
-            # If no nested structure, return the data as is
-            return data
-        except json.JSONDecodeError as e:
-            logger.warning(f"Classification result is not valid JSON: {e}")
-            logger.debug("Trying text parsing instead")
+            # If we have a category directly in the data, use it
+            if "category" in data:
+                return data
+                
+            # No recognized structure - log warning
+            logger.warning("JSON structure doesn't contain expected category field")
+            return data  # Return what we have and let caller handle missing category
+            
+        except json.JSONDecodeError:
+            logger.debug("Classification result is not valid JSON, trying text parsing")
         
         # If not JSON, try to parse as text
         lines = result.strip().split('\n')
@@ -125,23 +111,19 @@ def parse_classification_result(result: str) -> Optional[Dict[str, Any]]:
                 key, value = [part.strip() for part in line.split(':', 1)]
                 data[key.lower()] = value
         
-        # Check if we have a category/type field
-        for field in ['category', 'type', 'classificação', 'categoria', 'tipo']:
+        # Look for category in various field names
+        category_fields = ['category', 'type', 'classificação', 'categoria', 'tipo']
+        for field in category_fields:
             if field in data:
-                if 'category' not in data:
-                    data['category'] = data[field]
+                data['category'] = data[field]
                 break
         
-        if not data.get('category'):
-            logger.warning("Could not determine category from classification result")
-            return None
-            
         logger.debug(f"Parsed classification result: {data}")
         return data
         
     except Exception as e:
         logger.error(f"Error parsing classification result: {str(e)}")
-        logger.debug(f"Exception details", exc_info=True)
+        logger.debug("Exception details", exc_info=True)
         return None
 
 def route_to_module(category: str, input_data: str, metadata: Dict[str, Any]) -> bool:
@@ -158,27 +140,35 @@ def route_to_module(category: str, input_data: str, metadata: Dict[str, Any]) ->
     """
     config = load_config()
     module_mapping = config.get("module_mapping", {})
-    default_module = config.get("default_module")
+    debug_mode = config.get("debug_mode", False)
     
     # Normalize category name (lowercase, remove accents, etc.)
     normalized_category = category.lower().strip()
     
     # Find the module path for this category
     module_path = None
-    for key, path in module_mapping.items():
-        if key.lower() in normalized_category or normalized_category in key.lower():
-            module_path = path
-            logger.info(f"Routing to module: {module_path} for category: {category}")
-            break
+    matched_category = None
     
-    # Use default module if no mapping found
-    if not module_path and default_module:
-        module_path = default_module
-        logger.info(f"Using default module: {module_path} for category: {category}")
+    # Try exact match first, then partial match
+    if normalized_category in module_mapping:
+        module_path = module_mapping[normalized_category]
+        matched_category = normalized_category
+        logger.debug(f"Found exact category match: {normalized_category}")
+    else:
+        # Try partial matching
+        for key, path in module_mapping.items():
+            if key.lower() in normalized_category or normalized_category in key.lower():
+                module_path = path
+                matched_category = key
+                logger.debug(f"Found partial category match: {key} for input: {normalized_category}")
+                break
     
+    # No mapping found - log and return failure
     if not module_path:
         logger.error(f"No module mapping found for category: {category}")
         return False
+    
+    logger.info(f"Routing to module: {module_path} for category: {category} (matched: {matched_category})")
     
     try:
         # Split the module path into module and function parts
@@ -195,20 +185,41 @@ def route_to_module(category: str, input_data: str, metadata: Dict[str, Any]) ->
         
         # Call the processing function with the input and metadata
         logger.debug(f"Calling {function_name} with input data and metadata")
+        if debug_mode:
+            logger.debug(f"Debug mode ON - would call {module_path} with metadata: {metadata}")
+            return True
+            
         result = process_function(input_data, metadata)
-        
         logger.info(f"Successfully processed data with {module_path}")
         return True
         
     except ImportError as e:
-        logger.error(f"Failed to import module {module_path}: {e}")
+        logger.error(f"Failed to import module {module_import_path}: {e}")
         return False
     except AttributeError as e:
         logger.error(f"Function {function_name} not found in module {module_import_path}: {e}")
         return False
     except Exception as e:
         logger.error(f"Error routing to module {module_path}: {e}")
+        logger.debug("Exception details", exc_info=True)
         return False
+
+def read_from_file_or_string(content: str, is_file: bool) -> str:
+    """
+    Read content from a file if is_file is True, otherwise return the content as is.
+    
+    Args:
+        content: File path or string content
+        is_file: Whether the content is a file path
+        
+    Returns:
+        The read content as string
+    """
+    if is_file:
+        logger.info(f"Reading from file: {content}")
+        with open(content, "r", encoding="utf-8") as f:
+            return f.read()
+    return content
 
 def main():
     """
@@ -224,24 +235,16 @@ def main():
     
     try:
         # Get classification result from file, argument, or stdin
-        if args.file and args.input:
-            logger.info(f"Reading classification from file: {args.input}")
-            with open(args.input, "r", encoding="utf-8") as f:
-                classification_result = f.read()
-        elif args.input:
-            classification_result = args.input
+        if args.input:
+            classification_result = read_from_file_or_string(args.input, args.file)
         else:
             logger.info("Reading classification from stdin...")
             classification_result = sys.stdin.read()
         
         # Get original text if provided
         original_text = None
-        if args.original_file and args.original:
-            logger.info(f"Reading original text from file: {args.original}")
-            with open(args.original, "r", encoding="utf-8") as f:
-                original_text = f.read()
-        elif args.original:
-            original_text = args.original
+        if args.original:
+            original_text = read_from_file_or_string(args.original, args.original_file)
         
         # Parse the classification result
         classification_data = parse_classification_result(classification_result)
@@ -260,8 +263,10 @@ def main():
         
         logger.info(f"Determined category: {category}")
         
-        # Use the original text if provided, otherwise use the classification text
-        input_data = original_text if original_text else classification_result
+        # Use the original text if provided, otherwise use the text from classification data if available
+        input_data = original_text
+        if not input_data:
+            input_data = classification_data.get("text", classification_result)
         
         # Route to the appropriate module
         success = route_to_module(category, input_data, classification_data)

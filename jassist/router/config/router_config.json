@@ -24,7 +24,6 @@
         "account": "jassist.contas.process_transaction_entry",
         "financas": "jassist.contas.process_transaction_entry"
     },
-    "default_module": "jassist.diario.process_diary_entry",
     "debug_mode": false,
     "logging": {
         "level": "INFO",
