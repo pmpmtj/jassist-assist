@@ -58,7 +58,6 @@ class ClassificationProcessor:
     def classify_text(
         self, 
         text: Union[str, Dict[str, Any]], 
-        response_format: Optional[Literal["text", "json"]] = None,
         force_new_thread: bool = False
     ) -> Optional[str]:
         """
@@ -66,8 +65,6 @@ class ClassificationProcessor:
         
         Args:
             text: The text to classify or a dict containing the text
-            response_format: Format for the response ("text" or "json").
-                          If None, uses the default from config
             force_new_thread: Force creation of a new thread instead of reusing
             
         Returns:
@@ -81,7 +78,6 @@ class ClassificationProcessor:
             # Use the adapter to classify the text
             result = self.adapter.classify_text(
                 text, 
-                response_format=response_format,
                 force_new_thread=force_new_thread
             )
             
@@ -152,7 +148,6 @@ def get_processor(
 
 def classify_text(
     text: Union[str, Dict[str, Any]], 
-    response_format: Optional[Literal["text", "json"]] = None,
     config_file: Optional[Path] = None,
     prompts_file: Optional[Path] = None,
     force_new_thread: bool = False,
@@ -163,8 +158,6 @@ def classify_text(
     
     Args:
         text: The text to classify or a dict containing the text
-        response_format: Format for the response ("text" or "json").
-                       If None, uses the default from config
         config_file: Optional path to a specific config file
         prompts_file: Optional path to a specific prompts file
         force_new_thread: Force creation of a new thread instead of reusing
@@ -183,6 +176,5 @@ def classify_text(
     # Classify the text
     return processor.classify_text(
         text, 
-        response_format=response_format,
         force_new_thread=force_new_thread
     )

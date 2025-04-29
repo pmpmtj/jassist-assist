@@ -147,12 +147,11 @@ class ClassificationAdapter:
         _THREAD_POOL.clear()
         logger.debug("Cleared classification thread pool")
     
-    def _get_thread_from_pool(self, response_format: str, assistant_id: str) -> Optional[str]:
+    def _get_thread_from_pool(self, assistant_id: str) -> Optional[str]:
         """
-        Get a thread ID from the thread pool for the given format and assistant.
+        Get a thread ID from the thread pool for the given assistant.
         
         Args:
-            response_format: The response format ("text" or "json")
             assistant_id: The OpenAI assistant ID
             
         Returns:
@@ -161,7 +160,7 @@ class ClassificationAdapter:
         if not self.use_thread_pool:
             return None
             
-        pool_key = f"{assistant_id}_{response_format}"
+        pool_key = f"{assistant_id}_json"
         threads = _THREAD_POOL.get(pool_key, [])
         
         if threads:
@@ -177,19 +176,18 @@ class ClassificationAdapter:
         
         return None
     
-    def _add_thread_to_pool(self, thread_id: str, response_format: str, assistant_id: str):
+    def _add_thread_to_pool(self, thread_id: str, assistant_id: str):
         """
         Add a thread ID to the thread pool.
         
         Args:
             thread_id: The thread ID to add
-            response_format: The response format ("text" or "json")
             assistant_id: The OpenAI assistant ID
         """
         if not self.use_thread_pool:
             return
             
-        pool_key = f"{assistant_id}_{response_format}"
+        pool_key = f"{assistant_id}_json"
         threads = _THREAD_POOL.get(pool_key, [])
         
         # Only add if not already in the pool
@@ -257,7 +255,6 @@ class ClassificationAdapter:
     def classify_text(
         self, 
         text: Union[str, Dict[str, Any]], 
-        response_format: Optional[Literal["text", "json"]] = None,
         force_new_thread: bool = False
     ) -> str:
         """
@@ -265,8 +262,6 @@ class ClassificationAdapter:
         
         Args:
             text: The text to classify or a dict containing the text
-            response_format: Format for the response ("text" or "json").
-                             If None, uses the default from config
             force_new_thread: Force creation of a new thread instead of reusing
             
         Returns:
@@ -279,9 +274,8 @@ class ClassificationAdapter:
         start_time = time.time()
         
         try:
-            # Use default response format if none specified
-            if response_format is None:
-                response_format = self.default_response_format
+            # Always use JSON format
+            response_format = "json"
                 
             # Extract text content if input is a dictionary
             if isinstance(text, dict):
@@ -292,13 +286,8 @@ class ClassificationAdapter:
             # Get prompt templates
             parse_prompt = self.get_prompt_template("parse_entry_prompt")
             
-            # Choose the appropriate instructions template based on format
-            if response_format == "json":
-                instruction_template_name = "assistant_instructions_json"
-            else:
-                instruction_template_name = "assistant_instructions"
-                
-            assistant_instructions = self.get_prompt_template(instruction_template_name)
+            # Always use the JSON instructions template
+            assistant_instructions = self.get_prompt_template("assistant_instructions_json")
             
             # Set up template variables
             template_vars = {
@@ -327,7 +316,7 @@ class ClassificationAdapter:
                 )
             elif self.use_thread_pool:
                 # Try to get a thread from our pool
-                thread_id = self._get_thread_from_pool(response_format, assistant_id)
+                thread_id = self._get_thread_from_pool(assistant_id)
             
             if not thread_id:
                 # Get or create a thread with the appropriate key
@@ -335,7 +324,7 @@ class ClassificationAdapter:
                 
                 # Add to thread pool if using pool and not forcing new
                 if self.use_thread_pool and not force_new_thread:
-                    self._add_thread_to_pool(thread_id, response_format, assistant_id)
+                    self._add_thread_to_pool(thread_id, assistant_id)
             
             logger.info(f"Using assistant ID: {assistant_id}")
             logger.info(f"Using thread ID: {thread_id}")
@@ -366,33 +355,3 @@ class ClassificationAdapter:
             error_msg = f"Error during classification: {e} (after {elapsed_time:.2f}s)"
             logger.error(error_msg)
             raise AssistantClientError(error_msg)
-
-
-def classify_text(
-    text: Union[str, Dict[str, Any]], 
-    response_format: Optional[Literal["text", "json"]] = None,
-    force_new_thread: bool = False
-) -> str:
-    """
-    Classify text using the classification adapter.
-    
-    This function provides a simple interface to classify text
-    without needing to manage the adapter instance directly.
-    
-    Args:
-        text: The text to classify or a dict containing the text
-        response_format: Format for the response ("text" or "json").
-                         If None, uses the default from config
-        force_new_thread: Force creation of a new thread instead of reusing
-        
-    Returns:
-        str: The classification result
-        
-    Raises:
-        ConfigError: If required configuration is missing
-        AssistantClientError: If processing fails
-    """
-    # The detailed timing and process logging is already handled in the adapter's classify_text method
-    # so here we'll just create and use the adapter with minimal logging
-    adapter = ClassificationAdapter()
-    return adapter.classify_text(text=text, response_format=response_format, force_new_thread=force_new_thread) 
