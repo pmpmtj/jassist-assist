@@ -180,3 +180,4 @@ logs/
 credentials/
 *.log
 *.pickle
+pipeline_state.json

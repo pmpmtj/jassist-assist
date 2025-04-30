@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from jassist.logger_utils.logger_utils import setup_logger
 from jassist.pipeline.pipeline import run_pipeline as execute_pipeline
-from jassist.utils.file_tools import clean_directory
+from jassist.utils.file_tools import clean_directory, ensure_file_exists
 
 # === Constants ===
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -129,6 +129,17 @@ def main():
     logger.info("Starting scheduler...")
 
     try:
+        # Ensure pipeline state file exists
+        default_state = {
+            "last_run_time": datetime.now().isoformat(),
+            "last_run_status": "pending"
+        }
+        state_result = ensure_file_exists(STATE_FILE, default_state)
+        if state_result["status"] == "success" and state_result["created"]:
+            logger.info(f"Created pipeline state file: {STATE_FILE}")
+        elif state_result["status"] == "error":
+            logger.error(f"Failed to ensure pipeline state file: {state_result['message']}")
+        
         config = load_config()
         validate_config(config)
         interval = calculate_interval_seconds(config["scheduler"]["runs_per_day"])

@@ -63,4 +63,51 @@ def clean_directory(directory_path: str | Path) -> dict:
         return {
             "status": "error",
             "message": f"Error cleaning directory: {str(e)}"
+        }
+
+def ensure_file_exists(file_path: str | Path, default_content: dict = None) -> dict:
+    """
+    Ensures a JSON file exists at the given path. If not, creates it with default content.
+    
+    Args:
+        file_path (str | Path): Path to the JSON file
+        default_content (dict, optional): Default content to write if file doesn't exist
+        
+    Returns:
+        dict: Result of the operation with status and message
+    """
+    import json
+    
+    try:
+        # Convert to Path object if string
+        path = Path(file_path) if isinstance(file_path, str) else file_path
+        
+        # Create parent directories if they don't exist
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Check if file exists
+        if not path.exists():
+            logger.info(f"File does not exist, creating: {path}")
+            
+            # Write default content
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(default_content or {}, f, indent=2)
+                
+            return {
+                "status": "success",
+                "message": f"Created file with default content: {path}",
+                "created": True
+            }
+        
+        return {
+            "status": "success",
+            "message": f"File already exists: {path}",
+            "created": False
+        }
+        
+    except Exception as e:
+        logger.error(f"Error ensuring file exists {file_path}: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Error ensuring file exists: {str(e)}"
         } 
